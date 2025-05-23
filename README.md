@@ -12,9 +12,9 @@ Este proyecto es una aplicación desarrollada con React Native y Expo.
    
 2. Iniciá el proyecto con Expo:
 
-  ```bash
-  npx expo start
-  ```
+	  ```bash
+	  npx expo start
+	  ```
 
 3.	Descargá la app Expo Go en tu celular:
 	•	Disponible para Android (funciona seguro).
