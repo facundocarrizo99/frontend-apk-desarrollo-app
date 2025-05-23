@@ -7,7 +7,7 @@ Este proyecto es una aplicación desarrollada con React Native y Expo.
 1. Cloná el repositorio y accedé al directorio del proyecto:
 
    ```bash
-   cd cocinando-app-router
+   cd cocinando-app
    ```
    
 2. Iniciá el proyecto con Expo:
