@@ -4,23 +4,24 @@ import { Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } 
 import Header from '../components/Header';
 
 
-export default function RecuperarPasswordScreen() {
-   const [email, setEmail] = useState<string>('');
+export default function VerificarCodigoScreen() {
+   const [codigo, setCodigo] = useState<string>('');
+   const [successVisible, setSuccessVisible] = useState<boolean>(false);
    const [errorVisible, setErrorVisible] = useState<boolean>(false);
 
 
    const handleSubmit = async () => {
-       if (!email) {
+       if (!codigo) {
            setErrorVisible(true);
            return;
        }
       
-       // TODO: Consultar API para recuperar contraseña
+       // TODO: Consultar API para verificar código
        // try {
-       //     const response = await fetch('http://localhost:8080/api/forgot-password', {
+       //     const response = await fetch('http://localhost:8080/api/verify-code', {
        //         method: 'POST',
        //         headers: { 'Content-Type': 'application/json' },
-       //         body: JSON.stringify({ email }),
+       //         body: JSON.stringify({ code: codigo }),
        //     });
        //    
        //     if (response.ok) {
@@ -32,13 +33,22 @@ export default function RecuperarPasswordScreen() {
        //     setErrorVisible(true);
        // }
       
-       // Redirigir a la pantalla de verificar código
-       router.push('/verificarCodigo');
+       // Por ahora mostramos el modal de éxito
+       setSuccessVisible(true);
    };
 
 
+   const handleSuccess = () => {
+       setSuccessVisible(false);
+       // TODO: Navegar a pantalla de cambiar contraseña o volver al login
+       router.replace('/login');
+   };
 
 
+   const handleResendCode = () => {
+       // TODO: Reenviar código
+       alert('Código reenviado a tu correo electrónico');
+   };
 
 
    return (
@@ -48,35 +58,64 @@ export default function RecuperarPasswordScreen() {
            <View style={styles.formContainer}>
                <View style={styles.card}>
                    <Text style={styles.title}>Recuperar Contraseña</Text>
-                   <Text style={styles.description}>
-                       Ingresa tu alias o email para recibir instrucciones de recuperación
-                   </Text>
-
-
+                  
                    <TextInput
-                       placeholder="Alias o Email"
+                       placeholder="Código de verificación"
                        style={styles.input}
-                       value={email}
-                       onChangeText={setEmail}
-                       keyboardType="email-address"
-                       autoCapitalize="none"
+                       value={codigo}
+                       onChangeText={setCodigo}
+                       keyboardType="numeric"
+                       maxLength={6}
+                       textAlign="center"
                    />
 
 
+                   <Text style={styles.infoText}>
+                       Le enviamos un código verificador a su correo electrónico
+                   </Text>
+
+
                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                       <Text style={styles.buttonText}>Enviar</Text>
+                       <Text style={styles.buttonText}>Verificar</Text>
+                   </TouchableOpacity>
+
+
+                   <TouchableOpacity onPress={handleResendCode}>
+                       <Text style={styles.resendText}>Reenviar código</Text>
                    </TouchableOpacity>
 
 
                    <TouchableOpacity onPress={() => router.back()}>
-                       <Text style={styles.backToLogin}>Volver al inicio de sesión</Text>
+                       <Text style={styles.backText}>Volver</Text>
                    </TouchableOpacity>
                </View>
            </View>
 
 
-
-
+           {/* Modal de Éxito */}
+           <Modal
+               transparent
+               visible={successVisible}
+               animationType="fade"
+               onRequestClose={() => setSuccessVisible(false)}
+           >
+               <View style={styles.modalBackground}>
+                   <View style={styles.modalBox}>
+                       <Text style={styles.modalSuccess}>✅</Text>
+                       <Text style={styles.modalTitle}>Código Verificado</Text>
+                       <Text style={styles.modalText}>
+                           Tu código ha sido verificado correctamente.{"\n"}
+                           Ahora puedes iniciar sesión nuevamente.
+                       </Text>
+                       <TouchableOpacity
+                           style={styles.modalButton}
+                           onPress={handleSuccess}
+                       >
+                           <Text style={styles.modalButtonText}>Continuar</Text>
+                       </TouchableOpacity>
+                   </View>
+               </View>
+           </Modal>
 
 
            {/* Modal de Error */}
@@ -89,9 +128,10 @@ export default function RecuperarPasswordScreen() {
                <View style={styles.modalBackground}>
                    <View style={styles.modalBox}>
                        <Text style={styles.modalWarning}>⚠️</Text>
-                       <Text style={styles.modalTitle}>Error</Text>
+                       <Text style={styles.modalTitle}>Código Incorrecto</Text>
                        <Text style={styles.modalText}>
-                           Por favor ingresa tu alias o email.{"\n"}
+                           El código ingresado no es válido.{"\n"}
+                           Por favor verifica e intenta nuevamente.{"\n"}
                            Si el problema persiste, comunícate con soporte:{"\n"}
                            soporte@cocinando.org
                        </Text>
@@ -130,16 +170,9 @@ const styles = StyleSheet.create({
    title: {
        fontSize: 20,
        fontWeight: 'bold',
-       marginBottom: 10,
+       marginBottom: 20,
        color: '#000',
        textAlign: 'center',
-   },
-   description: {
-       fontSize: 14,
-       color: '#333',
-       textAlign: 'center',
-       marginBottom: 20,
-       lineHeight: 18,
    },
    input: {
        backgroundColor: '#fff',
@@ -148,19 +181,35 @@ const styles = StyleSheet.create({
        paddingVertical: Platform.OS === 'ios' ? 14 : 10,
        paddingHorizontal: 20,
        marginVertical: 8,
+       fontSize: 18,
+       letterSpacing: 2,
+   },
+   infoText: {
+       fontSize: 14,
+       color: '#333',
+       textAlign: 'center',
+       marginTop: 15,
+       marginBottom: 20,
+       lineHeight: 18,
    },
    button: {
        backgroundColor: '#4C5F00',
        paddingHorizontal: 20,
        paddingVertical: 10,
        borderRadius: 30,
-       marginVertical: 20,
+       marginVertical: 10,
    },
    buttonText: {
        color: '#fff',
        fontWeight: 'bold',
    },
-   backToLogin: {
+   resendText: {
+       color: '#1C1C1C',
+       textDecorationLine: 'underline',
+       marginTop: 10,
+       fontSize: 13,
+   },
+   backText: {
        color: '#1C1C1C',
        textDecorationLine: 'underline',
        marginTop: 10,
@@ -187,8 +236,9 @@ const styles = StyleSheet.create({
        marginBottom: 8,
        textAlign: 'center',
    },
-
-
+   modalSuccess: {
+       fontSize: 28,
+   },
    modalWarning: {
        fontSize: 28,
    },

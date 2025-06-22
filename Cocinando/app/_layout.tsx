@@ -6,6 +6,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="recuperarPassword" />
+      <Stack.Screen name="verificarCodigo" />
       <Stack.Screen name="homeScreen" />
       <Stack.Screen name="perfil" />
       <Stack.Screen name="favoritos" />
