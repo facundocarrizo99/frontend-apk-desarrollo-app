@@ -1,15 +1,15 @@
+import Checkbox from 'expo-checkbox';
+import { router } from "expo-router";
 import { useState } from 'react';
 import {
-    View,
+    Modal,
+    Platform,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    Platform,
-    Modal,
+    View,
 } from 'react-native';
-import Checkbox from 'expo-checkbox';
-import {Redirect, router} from "expo-router";
 
 export default function LoginForm() {
     const [email, setEmail] = useState<string>('');
@@ -76,7 +76,7 @@ export default function LoginForm() {
                     <Text style={styles.buttonText}>Enviar</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/recuperarPassword')}>
                     <Text style={styles.forgotPassword}>Olvidé mi contraseña</Text>
                 </TouchableOpacity>
             </View>
