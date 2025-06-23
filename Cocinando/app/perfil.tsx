@@ -4,50 +4,51 @@ import React from 'react';
 import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { UserManager } from '../utils/userManager';
 
 
-const user = {
-   name: 'Pedro Pérez',
-   avatar: 'https://randomuser.me/api/portraits/men/10.jpg',
-   age: 28,
-   nationality: 'Argentino',
-   recipesCount: 12,
-};
-
-
-const myRecipes = [
+const getMyRecipes = (user: any) => [
    {
        id: '1',
        title: 'Rosquitas de naranja',
        image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
-       author: 'Pedro Pérez',
+       author: user.name,
        authorAvatar: user.avatar
    },
    {
        id: '2',
        title: 'Milanesas de pescado',
        image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop',
-       author: 'Pedro Pérez',
+       author: user.name,
        authorAvatar: user.avatar
    },
    {
        id: '3',
        title: 'Arroz primavera',
        image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
-       author: 'Pedro Pérez',
+       author: user.name,
        authorAvatar: user.avatar
    },
    {
        id: '4',
        title: 'Empanadas caseras',
        image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop',
-       author: 'Pedro Pérez',
+       author: user.name,
        authorAvatar: user.avatar
    },
 ];
 
 
 export default function PerfilScreen() {
+   const user = UserManager.getCurrentUser();
+  
+   // Si no hay usuario logueado, redirigir al login
+   if (!user) {
+       router.replace('/login');
+       return null;
+   }
+
+
    const handleEditProfile = () => {
        router.push('/editarPerfil');
    };
@@ -96,7 +97,7 @@ export default function PerfilScreen() {
 
                {/* Lista de recetas */}
                <View style={styles.recipesContainer}>
-                   {myRecipes.map((recipe) => (
+                   {getMyRecipes(user).map((recipe) => (
                        <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
                            <ImageBackground
                                source={{ uri: recipe.image }}

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, Linking, Modal, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { UserManager } from '../utils/userManager';
 
 
 export default function Header() {
@@ -51,6 +52,12 @@ export default function Header() {
            case 'editar-perfil':
                router.push('/editarPerfil');
                break;
+           case 'aprobar-recetas':
+               showInfo('Panel de Administración', 'Función para aprobar recetas pendientes estará disponible pronto.');
+               break;
+           case 'aprobar-comentarios':
+               showInfo('Panel de Administración', 'Función para aprobar comentarios pendientes estará disponible pronto.');
+               break;
            case 'cerrar-sesion':
                showConfirmLogout();
                break;
@@ -60,6 +67,7 @@ export default function Header() {
 
    const handleLogout = () => {
        setConfirmVisible(false);
+       UserManager.logout();
        router.replace('/login');
    };
 
@@ -167,6 +175,29 @@ export default function Header() {
                            <Ionicons name="person-outline" size={20} color="#4C5F00" />
                            <Text style={styles.menuText}>Editar perfil</Text>
                        </TouchableOpacity>
+
+
+                       {/* Opciones solo para administradores */}
+                       {UserManager.isAdmin() && (
+                           <>
+                               <TouchableOpacity
+                                   style={styles.menuItem}
+                                   onPress={() => handleProfileOption('aprobar-recetas')}
+                               >
+                                   <Ionicons name="checkmark-circle-outline" size={20} color="#4C5F00" />
+                                   <Text style={styles.menuText}>Aprobar recetas</Text>
+                               </TouchableOpacity>
+
+
+                               <TouchableOpacity
+                                   style={styles.menuItem}
+                                   onPress={() => handleProfileOption('aprobar-comentarios')}
+                               >
+                                   <Ionicons name="chatbubble-ellipses-outline" size={20} color="#4C5F00" />
+                                   <Text style={styles.menuText}>Aprobar comentarios</Text>
+                               </TouchableOpacity>
+                           </>
+                       )}
 
 
                        <TouchableOpacity
