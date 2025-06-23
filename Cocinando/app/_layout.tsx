@@ -13,6 +13,7 @@ export default function RootLayout() {
       <Stack.Screen name="favoritos" />
       <Stack.Screen name="editarPerfil" />
       <Stack.Screen name="aprobarRecetas" />
+      <Stack.Screen name="aprobarComentarios" />
     </Stack>
   );
 }

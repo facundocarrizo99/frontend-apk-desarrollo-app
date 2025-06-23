@@ -56,7 +56,7 @@ export default function Header() {
                router.push('/aprobarRecetas' as any);
                break;
            case 'aprobar-comentarios':
-               showInfo('Panel de Administración', 'Función para aprobar comentarios pendientes estará disponible pronto.');
+               router.push('/aprobarComentarios' as any);
                break;
            case 'cerrar-sesion':
                showConfirmLogout();
@@ -384,5 +384,3 @@ const styles = StyleSheet.create({
        backgroundColor: '#d32f2f',
    },
 });
-
-
