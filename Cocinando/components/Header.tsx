@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Image, Linking, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Modal, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 
 export default function Header() {
@@ -66,23 +66,27 @@ export default function Header() {
 
    return (
        <View style={styles.container}>
-           {/* Menú hamburguesa */}
-           <TouchableOpacity onPress={() => setMenuVisible(true)}>
-               <Ionicons name="menu" size={28} color="white" />
-           </TouchableOpacity>
+           <StatusBar barStyle="light-content" backgroundColor="#4C5F00" />
+          
+           <View style={styles.header}>
+               {/* Menú hamburguesa */}
+               <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                   <Ionicons name="menu" size={28} color="white" />
+               </TouchableOpacity>
 
 
-           {/* Logo y título */}
-           <View style={styles.logoContainer}>
-               <Image source={require('../assets/images/logo.png')} style={styles.logo} />
-               <Text style={styles.title}>Cocinando</Text>
+               {/* Logo y título */}
+               <View style={styles.logoContainer}>
+                   <Image source={require('../assets/images/logo.png')} style={styles.logo} />
+                   <Text style={styles.title}>Cocinando</Text>
+               </View>
+
+
+               {/* Menú de perfil */}
+               <TouchableOpacity onPress={() => setProfileVisible(true)}>
+                   <Ionicons name="person-circle" size={28} color="white" />
+               </TouchableOpacity>
            </View>
-
-
-           {/* Menú de perfil */}
-           <TouchableOpacity onPress={() => setProfileVisible(true)}>
-               <Ionicons name="person-circle" size={28} color="white" />
-           </TouchableOpacity>
 
 
            {/* Modal del menú principal */}
@@ -247,7 +251,11 @@ export default function Header() {
 const styles = StyleSheet.create({
    container: {
        backgroundColor: '#4C5F00',
+   },
+   header: {
+       backgroundColor: '#4C5F00',
        padding: 15,
+       paddingTop: Platform.OS === 'ios' ? 50 : 35,
        flexDirection: 'row',
        justifyContent: 'space-between',
        alignItems: 'center',
