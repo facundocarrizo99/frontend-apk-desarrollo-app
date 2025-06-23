@@ -4,46 +4,70 @@ import { Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } 
 import Header from '../components/Header';
 
 
-export default function VerificarCodigoScreen() {
-   const [codigo, setCodigo] = useState<string>('');
+export default function CambiarPasswordScreen() {
+   const [newPassword, setNewPassword] = useState<string>('');
+   const [confirmPassword, setConfirmPassword] = useState<string>('');
+   const [successVisible, setSuccessVisible] = useState<boolean>(false);
    const [errorVisible, setErrorVisible] = useState<boolean>(false);
+   const [errorMessage, setErrorMessage] = useState<string>('');
+
+
+   const validatePasswords = () => {
+       if (!newPassword || !confirmPassword) {
+           setErrorMessage('Por favor completa todos los campos.');
+           return false;
+       }
+
+
+       if (newPassword.length < 6) {
+           setErrorMessage('La contraseña debe tener al menos 6 caracteres.');
+           return false;
+       }
+
+
+       if (newPassword !== confirmPassword) {
+           setErrorMessage('Las contraseñas no coinciden.');
+           return false;
+       }
+
+
+       return true;
+   };
 
 
    const handleSubmit = async () => {
-       if (!codigo) {
+       if (!validatePasswords()) {
            setErrorVisible(true);
            return;
        }
       
-       // TODO: Consultar API para verificar código
+       // TODO: Consultar API para cambiar contraseña
        // try {
-       //     const response = await fetch('http://localhost:8080/api/verify-code', {
+       //     const response = await fetch('http://localhost:8080/api/reset-password', {
        //         method: 'POST',
        //         headers: { 'Content-Type': 'application/json' },
-       //         body: JSON.stringify({ code: codigo }),
+       //         body: JSON.stringify({ newPassword }),
        //     });
        //    
        //     if (response.ok) {
        //         setSuccessVisible(true);
        //     } else {
+       //         setErrorMessage('Error al actualizar la contraseña.');
        //         setErrorVisible(true);
        //     }
        // } catch (error) {
+       //     setErrorMessage('Error de conexión. Intenta nuevamente.');
        //     setErrorVisible(true);
        // }
       
-       // Redirigir a la pantalla de cambiar contraseña
-       router.push('/cambiarPassword');
+       // Por ahora mostramos el modal de éxito
+       setSuccessVisible(true);
    };
 
 
-
-
-
-
-   const handleResendCode = () => {
-       // TODO: Reenviar código
-       alert('Código reenviado a tu correo electrónico');
+   const handleSuccess = () => {
+       setSuccessVisible(false);
+       router.replace('/login');
    };
 
 
@@ -54,30 +78,33 @@ export default function VerificarCodigoScreen() {
            <View style={styles.formContainer}>
                <View style={styles.card}>
                    <Text style={styles.title}>Recuperar Contraseña</Text>
-                  
-                   <TextInput
-                       placeholder="Código de verificación"
-                       style={styles.input}
-                       value={codigo}
-                       onChangeText={setCodigo}
-                       keyboardType="numeric"
-                       maxLength={6}
-                       textAlign="center"
-                   />
-
-
-                   <Text style={styles.infoText}>
-                       Le enviamos un código verificador a su correo electrónico
+                   <Text style={styles.description}>
+                       Ingresa tu nueva contraseña
                    </Text>
 
 
+                   <TextInput
+                       placeholder="Nueva contraseña"
+                       secureTextEntry
+                       style={styles.input}
+                       value={newPassword}
+                       onChangeText={setNewPassword}
+                       autoCapitalize="none"
+                   />
+
+
+                   <TextInput
+                       placeholder="Repetir contraseña"
+                       secureTextEntry
+                       style={styles.input}
+                       value={confirmPassword}
+                       onChangeText={setConfirmPassword}
+                       autoCapitalize="none"
+                   />
+
+
                    <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                       <Text style={styles.buttonText}>Verificar</Text>
-                   </TouchableOpacity>
-
-
-                   <TouchableOpacity onPress={handleResendCode}>
-                       <Text style={styles.resendText}>Reenviar código</Text>
+                       <Text style={styles.buttonText}>Enviar</Text>
                    </TouchableOpacity>
 
 
@@ -88,8 +115,30 @@ export default function VerificarCodigoScreen() {
            </View>
 
 
-
-
+           {/* Modal de Éxito */}
+           <Modal
+               transparent
+               visible={successVisible}
+               animationType="fade"
+               onRequestClose={() => setSuccessVisible(false)}
+           >
+               <View style={styles.modalBackground}>
+                   <View style={styles.modalBox}>
+                       <Text style={styles.modalSuccess}>✅</Text>
+                       <Text style={styles.modalTitle}>Contraseña Actualizada</Text>
+                       <Text style={styles.modalText}>
+                           Tu contraseña ha sido actualizada correctamente.{"\n"}
+                           Ahora puedes iniciar sesión con tu nueva contraseña.
+                       </Text>
+                       <TouchableOpacity
+                           style={styles.modalButton}
+                           onPress={handleSuccess}
+                       >
+                           <Text style={styles.modalButtonText}>Ir al Login</Text>
+                       </TouchableOpacity>
+                   </View>
+               </View>
+           </Modal>
 
 
            {/* Modal de Error */}
@@ -102,12 +151,9 @@ export default function VerificarCodigoScreen() {
                <View style={styles.modalBackground}>
                    <View style={styles.modalBox}>
                        <Text style={styles.modalWarning}>⚠️</Text>
-                       <Text style={styles.modalTitle}>Código Incorrecto</Text>
+                       <Text style={styles.modalTitle}>Error</Text>
                        <Text style={styles.modalText}>
-                           El código ingresado no es válido.{"\n"}
-                           Por favor verifica e intenta nuevamente.{"\n"}
-                           Si el problema persiste, comunícate con soporte:{"\n"}
-                           soporte@cocinando.org
+                           {errorMessage}
                        </Text>
                        <TouchableOpacity
                            style={styles.modalButton}
@@ -144,9 +190,16 @@ const styles = StyleSheet.create({
    title: {
        fontSize: 20,
        fontWeight: 'bold',
-       marginBottom: 20,
+       marginBottom: 10,
        color: '#000',
        textAlign: 'center',
+   },
+   description: {
+       fontSize: 14,
+       color: '#333',
+       textAlign: 'center',
+       marginBottom: 20,
+       lineHeight: 18,
    },
    input: {
        backgroundColor: '#fff',
@@ -155,33 +208,17 @@ const styles = StyleSheet.create({
        paddingVertical: Platform.OS === 'ios' ? 14 : 10,
        paddingHorizontal: 20,
        marginVertical: 8,
-       fontSize: 18,
-       letterSpacing: 2,
-   },
-   infoText: {
-       fontSize: 14,
-       color: '#333',
-       textAlign: 'center',
-       marginTop: 15,
-       marginBottom: 20,
-       lineHeight: 18,
    },
    button: {
        backgroundColor: '#4C5F00',
        paddingHorizontal: 20,
        paddingVertical: 10,
        borderRadius: 30,
-       marginVertical: 10,
+       marginVertical: 20,
    },
    buttonText: {
        color: '#fff',
        fontWeight: 'bold',
-   },
-   resendText: {
-       color: '#1C1C1C',
-       textDecorationLine: 'underline',
-       marginTop: 10,
-       fontSize: 13,
    },
    backText: {
        color: '#1C1C1C',
@@ -210,8 +247,9 @@ const styles = StyleSheet.create({
        marginBottom: 8,
        textAlign: 'center',
    },
-
-
+   modalSuccess: {
+       fontSize: 28,
+   },
    modalWarning: {
        fontSize: 28,
    },
