@@ -53,7 +53,7 @@ export default function Header() {
                router.push('/editarPerfil');
                break;
            case 'aprobar-recetas':
-               showInfo('Panel de Administración', 'Función para aprobar recetas pendientes estará disponible pronto.');
+               router.push('/aprobarRecetas' as any);
                break;
            case 'aprobar-comentarios':
                showInfo('Panel de Administración', 'Función para aprobar comentarios pendientes estará disponible pronto.');
@@ -384,3 +384,5 @@ const styles = StyleSheet.create({
        backgroundColor: '#d32f2f',
    },
 });
+
+
