@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { useAuthGuard } from '../utils/useAuthGuard';
 
 
 const allRecipes = [
@@ -66,6 +67,9 @@ const allRecipes = [
 
 
 export default function HomeScreen() {
+   // Proteger la ruta
+   useAuthGuard();
+  
    const [searchText, setSearchText] = useState<string>('');
    const [filteredRecipes, setFilteredRecipes] = useState(allRecipes);
 

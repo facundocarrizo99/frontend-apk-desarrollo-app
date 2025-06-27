@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { useAuthGuard } from '../utils/useAuthGuard';
 
 
 // Lista de recetas pendientes de aprobación
@@ -51,6 +52,9 @@ const recetasPendientes = [
 
 
 export default function AprobarRecetasScreen() {
+   // Proteger la ruta
+   useAuthGuard();
+  
    const [recetas, setRecetas] = useState(recetasPendientes);
    const [confirmVisible, setConfirmVisible] = useState(false);
    const [successVisible, setSuccessVisible] = useState(false);

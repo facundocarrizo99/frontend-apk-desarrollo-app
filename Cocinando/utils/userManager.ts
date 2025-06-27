@@ -142,6 +142,12 @@ export const UserManager = {
    },
 
 
+   // Verificar si está autenticado
+   isAuthenticated: (): boolean => {
+       return currentUser !== null && authToken !== null;
+   },
+
+
    // Verificar si es admin
    isAdmin: (): boolean => {
        return currentUser?.role === 'admin';

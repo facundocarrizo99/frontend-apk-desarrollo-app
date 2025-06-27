@@ -5,6 +5,7 @@ import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity,
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
 import { User } from '../types/Recipie';
+import { useAuthGuard } from '../utils/useAuthGuard';
 import { UserManager } from '../utils/userManager';
 
 
@@ -41,11 +42,15 @@ const getMyRecipes = (user: User) => [
 
 
 export default function PerfilScreen() {
+   // Proteger la ruta
+   useAuthGuard();
+  
    const user = UserManager.getCurrentUser();
   
-   // Si no hay usuario logueado, redirigir al login
+   // El AuthGuard ya se encarga de la autenticación
+   // Si llegamos aquí, el usuario está autenticado
    if (!user) {
-       router.replace('/login');
+       // Esto no debería pasar, pero por seguridad
        return null;
    }
 

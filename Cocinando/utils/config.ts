@@ -22,8 +22,8 @@ export const APP_CONFIG = {
   
    // Configuración de desarrollo
    DEV: {
-       SHOW_LOCAL_LOGIN: __DEV__, // Solo mostrar botón local en modo desarrollo
-       LOG_API_CALLS: __DEV__, // Log de llamadas API en desarrollo
+       SHOW_LOCAL_LOGIN: __DEV__, // es por comando sino poner true/false a gusto Solo mostrar botón local en modo desarrollo
+       LOG_API_CALLS: __DEV__, // es por comando sino poner true/false a gusto Log de llamadas API en desarrollo
    }
 };
 

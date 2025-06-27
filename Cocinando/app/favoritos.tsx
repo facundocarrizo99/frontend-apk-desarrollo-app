@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
 import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { useAuthGuard } from '../utils/useAuthGuard';
 
 
 // Lista de recetas favoritas de ejemplo
@@ -38,6 +40,9 @@ const recetasFavoritas = [
 
 
 export default function FavoritosScreen() {
+   // Proteger la ruta
+   useAuthGuard();
+  
    return (
        <View style={styles.container}>
            <Header />
