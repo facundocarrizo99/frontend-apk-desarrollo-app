@@ -4,10 +4,11 @@ import React from 'react';
 import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { User } from '../types/Recipie';
 import { UserManager } from '../utils/userManager';
 
 
-const getMyRecipes = (user: any) => [
+const getMyRecipes = (user: User) => [
    {
        id: '1',
        title: 'Rosquitas de naranja',
