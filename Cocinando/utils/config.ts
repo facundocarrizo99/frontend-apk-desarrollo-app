@@ -18,6 +18,7 @@ export const APP_CONFIG = {
        RECOVER_PASSWORD: '/user/auth/recover-password',
        VERIFY_CODE: '/user/auth/verify-code',
        CHANGE_PASSWORD: '/user/auth/change-password',
+       RECIPES_APPROVED: '/recipes/approved'
    },
   
    // Configuración de desarrollo

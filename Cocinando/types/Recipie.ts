@@ -1,10 +1,31 @@
 // Cocinando/types/Recipe.ts
 export interface Recipe {
+   _id: string;
    id: string;
    title: string;
+   description?: string;
+   ingredients?: string[];
+   instructions?: string[];
    image: string;
-   author: string;
-   authorAvatar: string;
+   author: {
+       _id: string;
+       name: string;
+       avatar?: string;
+   };
+   createdAt: string;
+   updatedAt: string;
+   approved?: boolean;
+   __v?: number;
+}
+
+
+// Interface para la respuesta de la API de recetas
+export interface RecipesApiResponse {
+   status: string;
+   results: number;
+   data: {
+       recetas: Recipe[];
+   };
 }
 
 

@@ -1,69 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import { ImageBackground, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Image,
+    ImageBackground,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { Recipe } from '../types/Recipie';
+import { RecipesService } from '../utils/recipesService';
 import { useAuthGuard } from '../utils/useAuthGuard';
-
-
-const allRecipes = [
-   {
-       id: '1',
-       title: 'Alfajores de maicena',
-       image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
-       author: 'María González',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/25.jpg'
-   },
-   {
-       id: '2',
-       title: 'Rolls de jamón y queso',
-       image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop',
-       author: 'Carlos López',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/32.jpg'
-   },
-   {
-       id: '3',
-       title: 'Guiso de fideos moñito',
-       image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
-       author: 'Ana Martínez',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/18.jpg'
-   },
-   {
-       id: '4',
-       title: 'Empanadas caseras',
-       image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop',
-       author: 'Pedro Pérez',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/10.jpg'
-   },
-   {
-       id: '5',
-       title: 'Tarta de verduras',
-       image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop',
-       author: 'Laura Silva',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/41.jpg'
-   },
-   {
-       id: '6',
-       title: 'Pasta con salsa pomodoro',
-       image: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d30e?w=400&h=300&fit=crop',
-       author: 'Roberto Cruz',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/28.jpg'
-   },
-   {
-       id: '7',
-       title: 'Ensalada mediterránea',
-       image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop',
-       author: 'Sofia Ruiz',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/55.jpg'
-   },
-   {
-       id: '8',
-       title: 'Pollo al horno con papas',
-       image: 'https://images.unsplash.com/photo-1598514983318-74ae8ef76721?w=400&h=300&fit=crop',
-       author: 'Miguel Torres',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/45.jpg'
-   }
-];
 
 
 export default function HomeScreen() {
@@ -71,19 +23,51 @@ export default function HomeScreen() {
    useAuthGuard();
   
    const [searchText, setSearchText] = useState<string>('');
-   const [filteredRecipes, setFilteredRecipes] = useState(allRecipes);
+   const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
+   const [loading, setLoading] = useState<boolean>(true);
+   const [error, setError] = useState<string>('');
+
+
+   // Cargar recetas al montar el componente
+   useEffect(() => {
+       loadRecipes();
+   }, []);
+
+
+   const loadRecipes = async () => {
+       setLoading(true);
+       setError('');
+      
+       try {
+           const result = await RecipesService.getApprovedRecipes();
+          
+           if (result.success && result.recipes) {
+               setAllRecipes(result.recipes);
+               setFilteredRecipes(result.recipes);
+           } else {
+               setError(result.error || 'Error al cargar recetas');
+               // Usar recetas de fallback en caso de error
+               const fallbackRecipes = RecipesService.getFallbackRecipes();
+               setAllRecipes(fallbackRecipes);
+               setFilteredRecipes(fallbackRecipes);
+           }
+       } catch (err) {
+           console.error('Error al cargar recetas:', err);
+           setError('Error de conexión');
+           // Usar recetas de fallback en caso de error
+           const fallbackRecipes = RecipesService.getFallbackRecipes();
+           setAllRecipes(fallbackRecipes);
+           setFilteredRecipes(fallbackRecipes);
+       } finally {
+           setLoading(false);
+       }
+   };
 
 
    const handleSearch = () => {
-       if (searchText.trim() === '') {
-           setFilteredRecipes(allRecipes);
-       } else {
-           const filtered = allRecipes.filter(recipe =>
-               recipe.title.toLowerCase().includes(searchText.toLowerCase()) ||
-               recipe.author.toLowerCase().includes(searchText.toLowerCase())
-           );
-           setFilteredRecipes(filtered);
-       }
+       const results = RecipesService.searchRecipes(allRecipes, searchText);
+       setFilteredRecipes(results);
    };
 
 
@@ -93,12 +77,44 @@ export default function HomeScreen() {
    };
 
 
+   // Función para obtener el avatar del autor con fallback
+   const getAuthorAvatar = (recipe: Recipe): string => {
+       return recipe.author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
+   };
+
+
+   if (loading) {
+       return (
+           <View style={styles.container}>
+               <Header />
+               <View style={styles.loadingContainer}>
+                   <ActivityIndicator size="large" color="#4C5F00" />
+                   <Text style={styles.loadingText}>Cargando recetas...</Text>
+               </View>
+               <BottomTabBar />
+           </View>
+       );
+   }
+
+
    return (
        <View style={styles.container}>
            <Header />
 
 
            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+               {/* Mostrar error si existe */}
+               {error && (
+                   <View style={styles.errorContainer}>
+                       <Ionicons name="warning-outline" size={20} color="#d32f2f" />
+                       <Text style={styles.errorText}>{error}</Text>
+                       <TouchableOpacity onPress={loadRecipes} style={styles.retryButton}>
+                           <Text style={styles.retryText}>Reintentar</Text>
+                       </TouchableOpacity>
+                   </View>
+               )}
+
+
                {/* Barra de búsqueda */}
                <View style={styles.searchContainer}>
                    <View style={styles.searchBar}>
@@ -127,7 +143,7 @@ export default function HomeScreen() {
                {/* Título de sección */}
                <View style={styles.sectionHeader}>
                    <Text style={styles.sectionTitle}>
-                       {searchText ? `Resultados para "${searchText}"` : 'Nuevas recetas'}
+                       {searchText ? `Resultados para "${searchText}"` : 'Recetas Aprobadas'}
                    </Text>
                    <Text style={styles.resultCount}>
                        {filteredRecipes.length} {filteredRecipes.length === 1 ? 'receta' : 'recetas'}
@@ -139,15 +155,24 @@ export default function HomeScreen() {
                {filteredRecipes.length > 0 ? (
                    <View style={styles.recipesContainer}>
                        {filteredRecipes.map((recipe) => (
-                           <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+                           <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
                                <ImageBackground
                                    source={{ uri: recipe.image }}
                                    style={styles.recipeBackground}
                                    imageStyle={styles.recipeBackgroundImage}
                                >
-                                   {/* Footer con nombre de la receta */}
+                                   {/* Footer con nombre de la receta y autor */}
                                    <View style={styles.recipeFooter}>
-                                       <Text style={styles.recipeTitle}>{recipe.title}</Text>
+                                       <View style={styles.recipeInfo}>
+                                           <Text style={styles.recipeTitle}>{recipe.title}</Text>
+                                           <View style={styles.authorInfo}>
+                                               <Image
+                                                   source={{ uri: getAuthorAvatar(recipe) }}
+                                                   style={styles.authorAvatar}
+                                               />
+                                               <Text style={styles.authorName}>Por {recipe.author.name}</Text>
+                                           </View>
+                                       </View>
                                    </View>
                                </ImageBackground>
                            </TouchableOpacity>
@@ -158,11 +183,13 @@ export default function HomeScreen() {
                        <Ionicons name="search" size={48} color="#ccc" />
                        <Text style={styles.noResultsTitle}>No se encontraron recetas</Text>
                        <Text style={styles.noResultsText}>
-                           Intenta con otros términos de búsqueda
+                           {searchText ? 'Intenta con otros términos de búsqueda' : 'No hay recetas disponibles'}
                        </Text>
-                       <TouchableOpacity style={styles.clearSearchButton} onPress={clearSearch}>
-                           <Text style={styles.clearSearchText}>Ver todas las recetas</Text>
-                       </TouchableOpacity>
+                       {searchText && (
+                           <TouchableOpacity style={styles.clearSearchButton} onPress={clearSearch}>
+                               <Text style={styles.clearSearchText}>Ver todas las recetas</Text>
+                           </TouchableOpacity>
+                       )}
                    </View>
                )}
            </ScrollView>
@@ -182,6 +209,42 @@ const styles = StyleSheet.create({
    content: {
        flex: 1,
        padding: 15,
+   },
+   loadingContainer: {
+       flex: 1,
+       justifyContent: 'center',
+       alignItems: 'center',
+       gap: 15,
+   },
+   loadingText: {
+       fontSize: 16,
+       color: '#4C5F00',
+       fontWeight: '500',
+   },
+   errorContainer: {
+       flexDirection: 'row',
+       alignItems: 'center',
+       backgroundColor: '#ffebee',
+       padding: 12,
+       borderRadius: 8,
+       marginBottom: 15,
+       gap: 8,
+   },
+   errorText: {
+       flex: 1,
+       color: '#d32f2f',
+       fontSize: 14,
+   },
+   retryButton: {
+       backgroundColor: '#d32f2f',
+       paddingHorizontal: 12,
+       paddingVertical: 6,
+       borderRadius: 4,
+   },
+   retryText: {
+       color: '#fff',
+       fontSize: 12,
+       fontWeight: 'bold',
    },
    searchContainer: {
        flexDirection: 'row',
@@ -262,18 +325,39 @@ const styles = StyleSheet.create({
    recipeBackgroundImage: {
        borderRadius: 15,
    },
-
-
    recipeFooter: {
        backgroundColor: 'rgba(0, 0, 0, 0.6)',
        padding: 15,
        borderBottomLeftRadius: 15,
        borderBottomRightRadius: 15,
    },
+   recipeInfo: {
+       gap: 8,
+   },
    recipeTitle: {
        color: '#fff',
        fontSize: 16,
        fontWeight: 'bold',
+       textShadowColor: 'rgba(0, 0, 0, 0.75)',
+       textShadowOffset: { width: 1, height: 1 },
+       textShadowRadius: 2,
+   },
+   authorInfo: {
+       flexDirection: 'row',
+       alignItems: 'center',
+       gap: 8,
+   },
+   authorAvatar: {
+       width: 24,
+       height: 24,
+       borderRadius: 12,
+       borderWidth: 1,
+       borderColor: '#fff',
+   },
+   authorName: {
+       color: '#fff',
+       fontSize: 12,
+       opacity: 0.9,
        textShadowColor: 'rgba(0, 0, 0, 0.75)',
        textShadowOffset: { width: 1, height: 1 },
        textShadowRadius: 2,
@@ -297,13 +381,13 @@ const styles = StyleSheet.create({
        marginBottom: 20,
    },
    clearSearchButton: {
-       backgroundColor: '#C4B04E',
+       backgroundColor: '#4C5F00',
        paddingHorizontal: 20,
        paddingVertical: 10,
        borderRadius: 20,
    },
    clearSearchText: {
-       color: '#000',
+       color: '#fff',
        fontWeight: 'bold',
    },
 });
