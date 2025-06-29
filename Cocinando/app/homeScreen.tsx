@@ -79,7 +79,25 @@ export default function HomeScreen() {
 
    // Función para obtener el avatar del autor con fallback
    const getAuthorAvatar = (recipe: Recipe): string => {
-       return recipe.author.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
+       return recipe.autor?.avatar || recipe.author?.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
+   };
+
+
+   // Función para obtener el nombre del autor con fallback
+   const getAuthorName = (recipe: Recipe): string => {
+       return recipe.autor?.name || recipe.author?.name || 'Autor desconocido';
+   };
+
+
+   // Función para obtener el título de la receta con fallback
+   const getRecipeTitle = (recipe: Recipe): string => {
+       return recipe.titulo || recipe.title || 'Sin título';
+   };
+
+
+   // Función para obtener la imagen de la receta con fallback
+   const getRecipeImage = (recipe: Recipe): string => {
+       return recipe.imagen || recipe.image || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
    };
 
 
@@ -157,20 +175,20 @@ export default function HomeScreen() {
                        {filteredRecipes.map((recipe) => (
                            <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
                                <ImageBackground
-                                   source={{ uri: recipe.image }}
+                                   source={{ uri: getRecipeImage(recipe) }}
                                    style={styles.recipeBackground}
                                    imageStyle={styles.recipeBackgroundImage}
                                >
                                    {/* Footer con nombre de la receta y autor */}
                                    <View style={styles.recipeFooter}>
                                        <View style={styles.recipeInfo}>
-                                           <Text style={styles.recipeTitle}>{recipe.title}</Text>
+                                           <Text style={styles.recipeTitle}>{getRecipeTitle(recipe)}</Text>
                                            <View style={styles.authorInfo}>
                                                <Image
                                                    source={{ uri: getAuthorAvatar(recipe) }}
                                                    style={styles.authorAvatar}
                                                />
-                                               <Text style={styles.authorName}>Por {recipe.author.name}</Text>
+                                               <Text style={styles.authorName}>Por {getAuthorName(recipe)}</Text>
                                            </View>
                                        </View>
                                    </View>

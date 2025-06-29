@@ -18,7 +18,10 @@ export const APP_CONFIG = {
        RECOVER_PASSWORD: '/user/auth/recover-password',
        VERIFY_CODE: '/user/auth/verify-code',
        CHANGE_PASSWORD: '/user/auth/change-password',
-       RECIPES_APPROVED: '/recipes/approved'
+       RECIPES_APPROVED: '/recipes/approved', // Recetas aprobadas
+       RECIPES_PENDING: '/recipes/pending', // Recetas pendientes de aprobación
+       RECIPE_APPROVE: '/recipes/:id/approve', // Aprobar receta (reemplazar :id)
+       RECIPE_DELETE: '/recipes/:id', // Eliminar receta (reemplazar :id)
    },
   
    // Configuración de desarrollo

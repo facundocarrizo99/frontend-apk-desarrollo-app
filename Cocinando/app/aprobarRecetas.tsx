@@ -1,66 +1,59 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
-import { Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ImageBackground, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { Recipe } from '../types/Recipie';
+import { PendingRecipesService } from '../utils/pendingRecipesServices';
 import { useAuthGuard } from '../utils/useAuthGuard';
-
-
-// Lista de recetas pendientes de aprobación
-const recetasPendientes = [
-   {
-       id: '1',
-       title: 'Milanesas de berenjena',
-       image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-       author: 'María González',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/15.jpg',
-       submittedDate: '2024-01-15',
-   },
-   {
-       id: '2',
-       title: 'Tarta de espinaca casera',
-       image: 'https://images.unsplash.com/photo-1571091718767-18b5b1457add?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-       author: 'Roberto Silva',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/22.jpg',
-       submittedDate: '2024-01-14',
-   },
-   {
-       id: '3',
-       title: 'Sopa de calabaza y jengibre',
-       image: 'https://images.unsplash.com/photo-1476718406336-bb5a9690ee2a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-       author: 'Laura Fernández',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/33.jpg',
-       submittedDate: '2024-01-13',
-   },
-   {
-       id: '4',
-       title: 'Brownies veganos',
-       image: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-       author: 'Diego Morales',
-       authorAvatar: 'https://randomuser.me/api/portraits/men/45.jpg',
-       submittedDate: '2024-01-12',
-   },
-   {
-       id: '5',
-       title: 'Ensalada mediterránea',
-       image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80',
-       author: 'Carmen Ruiz',
-       authorAvatar: 'https://randomuser.me/api/portraits/women/28.jpg',
-       submittedDate: '2024-01-11',
-   },
-];
 
 
 export default function AprobarRecetasScreen() {
    // Proteger la ruta
    useAuthGuard();
   
-   const [recetas, setRecetas] = useState(recetasPendientes);
+   const [recetas, setRecetas] = useState<Recipe[]>([]);
+   const [loading, setLoading] = useState<boolean>(true);
+   const [error, setError] = useState<string>('');
    const [confirmVisible, setConfirmVisible] = useState(false);
    const [successVisible, setSuccessVisible] = useState(false);
    const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null);
    const [selectedRecipe, setSelectedRecipe] = useState<{id: string, title: string} | null>(null);
    const [successMessage, setSuccessMessage] = useState('');
+   const [actionLoading, setActionLoading] = useState(false);
+
+
+   // Cargar recetas pendientes al montar el componente
+   useEffect(() => {
+       loadPendingRecipes();
+   }, []);
+
+
+   const loadPendingRecipes = async () => {
+       setLoading(true);
+       setError('');
+      
+       try {
+           const result = await PendingRecipesService.getPendingRecipes();
+          
+           if (result.success && result.recipes) {
+               setRecetas(result.recipes);
+           } else {
+               setError(result.error || 'Error al cargar recetas pendientes');
+               // Usar recetas de fallback en caso de error
+               const fallbackRecipes = PendingRecipesService.getFallbackRecipes();
+               setRecetas(fallbackRecipes);
+           }
+       } catch (err) {
+           console.error('Error al cargar recetas pendientes:', err);
+           setError('Error de conexión');
+           // Usar recetas de fallback en caso de error
+           const fallbackRecipes = PendingRecipesService.getFallbackRecipes();
+           setRecetas(fallbackRecipes);
+       } finally {
+           setLoading(false);
+       }
+   };
 
 
    const handleApprove = (recipeId: string, recipeTitle: string) => {
@@ -77,21 +70,45 @@ export default function AprobarRecetasScreen() {
    };
 
 
-   const executeAction = () => {
+   const executeAction = async () => {
        if (!selectedRecipe || !confirmAction) return;
       
-       setRecetas(prev => prev.filter(recipe => recipe.id !== selectedRecipe.id));
-       setConfirmVisible(false);
+       setActionLoading(true);
       
-       if (confirmAction === 'approve') {
-           setSuccessMessage(`La receta "${selectedRecipe.title}" ha sido aprobada.`);
-       } else {
-           setSuccessMessage(`La receta "${selectedRecipe.title}" ha sido rechazada.`);
+       try {
+           let result;
+          
+           if (confirmAction === 'approve') {
+               result = await PendingRecipesService.approveRecipe(selectedRecipe.id);
+           } else {
+               result = await PendingRecipesService.rejectRecipe(selectedRecipe.id);
+           }
+          
+           if (result.success) {
+               // Remover la receta de la lista local
+               setRecetas(prev => prev.filter(recipe => recipe._id !== selectedRecipe.id));
+               setConfirmVisible(false);
+              
+               if (confirmAction === 'approve') {
+                   setSuccessMessage(`La receta "${selectedRecipe.title}" ha sido aprobada.`);
+               } else {
+                   setSuccessMessage(`La receta "${selectedRecipe.title}" ha sido rechazada.`);
+               }
+              
+               setSuccessVisible(true);
+           } else {
+               setError(result.error || 'Error al procesar la acción');
+               setConfirmVisible(false);
+           }
+       } catch (err) {
+           console.error('Error al ejecutar acción:', err);
+           setError('Error de conexión al procesar la acción');
+           setConfirmVisible(false);
+       } finally {
+           setActionLoading(false);
+           setSelectedRecipe(null);
+           setConfirmAction(null);
        }
-      
-       setSuccessVisible(true);
-       setSelectedRecipe(null);
-       setConfirmAction(null);
    };
 
 
@@ -102,11 +119,71 @@ export default function AprobarRecetasScreen() {
    };
 
 
+   // Función para obtener el avatar del autor con fallback
+   const getAuthorAvatar = (recipe: Recipe): string => {
+       return recipe.autor.avatar || recipe.author?.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
+   };
+
+
+   // Función para obtener el título de la receta
+   const getRecipeTitle = (recipe: Recipe): string => {
+       return recipe.titulo || recipe.title || 'Sin título';
+   };
+
+
+   // Función para obtener la imagen de la receta
+   const getRecipeImage = (recipe: Recipe): string => {
+       return recipe.imagen || recipe.image || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+   };
+
+
+   // Función para obtener el nombre del autor
+   const getAuthorName = (recipe: Recipe): string => {
+       return recipe.autor.name || recipe.author?.name || 'Autor desconocido';
+   };
+
+
+   // Función para formatear la fecha
+   const formatDate = (dateString: string): string => {
+       try {
+           return new Date(dateString).toLocaleDateString('es-ES');
+       } catch {
+           return 'Fecha no disponible';
+       }
+   };
+
+
+   if (loading) {
+       return (
+           <View style={styles.container}>
+               <Header />
+               <View style={styles.loadingContainer}>
+                   <ActivityIndicator size="large" color="#4C5F00" />
+                   <Text style={styles.loadingText}>Cargando recetas pendientes...</Text>
+               </View>
+               <BottomTabBar />
+           </View>
+       );
+   }
+
+
    return (
        <View style={styles.container}>
            <Header />
           
            <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+               {/* Mostrar error si existe */}
+               {error && (
+                   <View style={styles.errorContainer}>
+                       <Ionicons name="warning-outline" size={20} color="#d32f2f" />
+                       <Text style={styles.errorText}>{error}</Text>
+                       <TouchableOpacity onPress={loadPendingRecipes} style={styles.retryButton}>
+                           <Text style={styles.retryText}>Reintentar</Text>
+                       </TouchableOpacity>
+                   </View>
+               )}
+
+
                {/* Título de aprobar recetas */}
                <View style={styles.titleContainer}>
                    <Ionicons name="checkmark-circle-outline" size={28} color="#4C5F00" />
@@ -123,30 +200,30 @@ export default function AprobarRecetasScreen() {
                ) : (
                    <View style={styles.recipesContainer}>
                        {recetas.map((recipe) => (
-                           <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
+                           <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
                                <ImageBackground
-                                   source={{ uri: recipe.image }}
+                                   source={{ uri: getRecipeImage(recipe) }}
                                    style={styles.recipeBackground}
                                    imageStyle={styles.recipeBackgroundImage}
                                >
                                    {/* Header de la receta con autor y botones de acción */}
                                    <View style={styles.recipeHeader}>
                                        <View style={styles.authorInfo}>
-                                           <Image source={{ uri: recipe.authorAvatar }} style={styles.authorAvatar} />
-                                           <Text style={styles.authorName}>{recipe.author}</Text>
+                                           <Image source={{ uri: getAuthorAvatar(recipe) }} style={styles.authorAvatar} />
+                                           <Text style={styles.authorName}>{getAuthorName(recipe)}</Text>
                                        </View>
                                       
                                        {/* Botones de aprobar y rechazar */}
                                        <View style={styles.actionButtons}>
                                            <TouchableOpacity
                                                style={styles.approveButton}
-                                               onPress={() => handleApprove(recipe.id, recipe.title)}
+                                               onPress={() => handleApprove(recipe._id, getRecipeTitle(recipe))}
                                            >
                                                <Ionicons name="checkmark" size={20} color="#fff" />
                                            </TouchableOpacity>
                                            <TouchableOpacity
                                                style={styles.rejectButton}
-                                               onPress={() => handleReject(recipe.id, recipe.title)}
+                                               onPress={() => handleReject(recipe._id, getRecipeTitle(recipe))}
                                            >
                                                <Ionicons name="close" size={20} color="#fff" />
                                            </TouchableOpacity>
@@ -156,9 +233,9 @@ export default function AprobarRecetasScreen() {
 
                                    {/* Footer con nombre de la receta */}
                                    <View style={styles.recipeFooter}>
-                                       <Text style={styles.recipeTitle}>{recipe.title}</Text>
+                                       <Text style={styles.recipeTitle}>{getRecipeTitle(recipe)}</Text>
                                        <Text style={styles.submittedDate}>
-                                           Enviada: {new Date(recipe.submittedDate).toLocaleDateString('es-ES')}
+                                           Enviada: {formatDate(recipe.fechaCreacion || recipe.createdAt || '')}
                                        </Text>
                                    </View>
                                </ImageBackground>
@@ -197,16 +274,22 @@ export default function AprobarRecetasScreen() {
                            <TouchableOpacity
                                style={[styles.modalButton, styles.cancelButton]}
                                onPress={cancelAction}
+                               disabled={actionLoading}
                            >
                                <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Cancelar</Text>
                            </TouchableOpacity>
                            <TouchableOpacity
                                style={[styles.modalButton, confirmAction === 'approve' ? styles.approveModalButton : styles.rejectModalButton]}
                                onPress={executeAction}
+                               disabled={actionLoading}
                            >
-                               <Text style={styles.modalButtonText}>
-                                   {confirmAction === 'approve' ? 'Aprobar' : 'Rechazar'}
-                               </Text>
+                               {actionLoading ? (
+                                   <ActivityIndicator size="small" color="#fff" />
+                               ) : (
+                                   <Text style={styles.modalButtonText}>
+                                       {confirmAction === 'approve' ? 'Aprobar' : 'Rechazar'}
+                                   </Text>
+                               )}
                            </TouchableOpacity>
                        </View>
                    </View>
@@ -223,8 +306,8 @@ export default function AprobarRecetasScreen() {
            >
                <View style={styles.modalBackground}>
                    <View style={styles.modalBox}>
-                       <Text style={styles.modalIcon}>🎉</Text>
-                       <Text style={styles.modalTitle}>¡Éxito!</Text>
+                       <Text style={styles.modalIcon}>✅</Text>
+                       <Text style={styles.modalTitle}>Acción Completada</Text>
                        <Text style={styles.modalText}>{successMessage}</Text>
                        <TouchableOpacity
                            style={styles.modalButton}
@@ -249,6 +332,42 @@ const styles = StyleSheet.create({
        flex: 1,
        padding: 15,
    },
+   loadingContainer: {
+       flex: 1,
+       justifyContent: 'center',
+       alignItems: 'center',
+       gap: 15,
+   },
+   loadingText: {
+       fontSize: 16,
+       color: '#4C5F00',
+       fontWeight: '500',
+   },
+   errorContainer: {
+       flexDirection: 'row',
+       alignItems: 'center',
+       backgroundColor: '#ffebee',
+       padding: 12,
+       borderRadius: 8,
+       marginBottom: 15,
+       gap: 8,
+   },
+   errorText: {
+       flex: 1,
+       color: '#d32f2f',
+       fontSize: 14,
+   },
+   retryButton: {
+       backgroundColor: '#d32f2f',
+       paddingHorizontal: 12,
+       paddingVertical: 6,
+       borderRadius: 4,
+   },
+   retryText: {
+       color: '#fff',
+       fontSize: 12,
+       fontWeight: 'bold',
+   },
    titleContainer: {
        flexDirection: 'row',
        alignItems: 'center',
@@ -261,22 +380,22 @@ const styles = StyleSheet.create({
        color: '#4C5F00',
    },
    emptyContainer: {
-       flex: 1,
-       justifyContent: 'center',
        alignItems: 'center',
        paddingVertical: 60,
+       paddingHorizontal: 20,
    },
    emptyTitle: {
-       fontSize: 18,
+       fontSize: 22,
        fontWeight: 'bold',
        color: '#4C5F00',
-       marginTop: 16,
-       marginBottom: 8,
+       marginTop: 20,
+       marginBottom: 10,
    },
    emptyText: {
-       fontSize: 14,
+       fontSize: 16,
        color: '#666',
        textAlign: 'center',
+       lineHeight: 22,
    },
    recipesContainer: {
        gap: 15,
@@ -304,8 +423,8 @@ const styles = StyleSheet.create({
    },
    recipeHeader: {
        flexDirection: 'row',
-       alignItems: 'center',
        justifyContent: 'space-between',
+       alignItems: 'center',
        padding: 15,
        backgroundColor: 'rgba(0, 0, 0, 0.3)',
        borderTopLeftRadius: 15,
@@ -338,10 +457,10 @@ const styles = StyleSheet.create({
        gap: 8,
    },
    approveButton: {
-       backgroundColor: '#4C5F00',
+       backgroundColor: '#4CAF50',
+       borderRadius: 20,
        width: 36,
        height: 36,
-       borderRadius: 18,
        justifyContent: 'center',
        alignItems: 'center',
        elevation: 2,
@@ -350,14 +469,14 @@ const styles = StyleSheet.create({
            width: 0,
            height: 1,
        },
-       shadowOpacity: 0.2,
-       shadowRadius: 1.41,
+       shadowOpacity: 0.22,
+       shadowRadius: 2.22,
    },
    rejectButton: {
-       backgroundColor: '#D32F2F',
+       backgroundColor: '#f44336',
+       borderRadius: 20,
        width: 36,
        height: 36,
-       borderRadius: 18,
        justifyContent: 'center',
        alignItems: 'center',
        elevation: 2,
@@ -366,8 +485,8 @@ const styles = StyleSheet.create({
            width: 0,
            height: 1,
        },
-       shadowOpacity: 0.2,
-       shadowRadius: 1.41,
+       shadowOpacity: 0.22,
+       shadowRadius: 2.22,
    },
    recipeFooter: {
        backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -387,80 +506,72 @@ const styles = StyleSheet.create({
    submittedDate: {
        color: '#fff',
        fontSize: 12,
-       opacity: 0.9,
+       opacity: 0.8,
        textShadowColor: 'rgba(0, 0, 0, 0.75)',
        textShadowOffset: { width: 1, height: 1 },
        textShadowRadius: 2,
    },
-   // Estilos para modales
    modalBackground: {
        flex: 1,
-       backgroundColor: 'rgba(0, 0, 0, 0.5)',
+       backgroundColor: 'rgba(0,0,0,0.3)',
        justifyContent: 'center',
        alignItems: 'center',
    },
    modalBox: {
        backgroundColor: '#C4B04E',
+       padding: 25,
        borderRadius: 15,
-       padding: 20,
-       margin: 20,
+       width: '85%',
        alignItems: 'center',
-       elevation: 5,
-       shadowColor: '#000',
-       shadowOffset: {
-           width: 0,
-           height: 2,
-       },
-       shadowOpacity: 0.25,
-       shadowRadius: 3.84,
-       minWidth: 280,
    },
    modalIcon: {
-       fontSize: 48,
-       marginBottom: 15,
+       fontSize: 28,
+       marginBottom: 10,
    },
    modalTitle: {
        fontSize: 18,
        fontWeight: 'bold',
        color: '#000',
-       marginBottom: 10,
+       marginBottom: 15,
        textAlign: 'center',
    },
    modalText: {
        fontSize: 14,
-       color: '#000',
+       color: '#1C1C1C',
        textAlign: 'center',
        marginBottom: 20,
-       lineHeight: 20,
+       lineHeight: 18,
    },
    buttonContainer: {
        flexDirection: 'row',
        gap: 10,
-       width: '100%',
+       marginTop: 10,
    },
    modalButton: {
        backgroundColor: '#4C5F00',
-       paddingVertical: 12,
+       paddingVertical: 10,
        paddingHorizontal: 20,
-       borderRadius: 8,
-       flex: 1,
+       borderRadius: 20,
+       minWidth: 80,
        alignItems: 'center',
    },
    modalButtonText: {
        color: '#fff',
-       fontSize: 14,
        fontWeight: 'bold',
+       fontSize: 14,
    },
    cancelButton: {
-       backgroundColor: '#666',
+       backgroundColor: 'transparent',
+       borderWidth: 1,
+       borderColor: '#4C5F00',
    },
    cancelButtonText: {
-       color: '#fff',
+       color: '#4C5F00',
    },
    approveModalButton: {
-       backgroundColor: '#4C5F00',
+       backgroundColor: '#4CAF50',
    },
    rejectModalButton: {
-       backgroundColor: '#D32F2F',
+       backgroundColor: '#f44336',
    },
 });
