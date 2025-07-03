@@ -80,9 +80,13 @@ export interface User {
    createdAt: string;
    updatedAt: string;
    __v: number;
+   // Campos adicionales para edición de perfil
+   apellido?: string;
+   fechaNacimiento?: string;
+   nacionalidad?: string; // Campo que puede venir de la API
    // Campos adicionales para la UI (calculados o por defecto)
    age?: number;
-   nationality?: string;
+   nationality?: string; // Campo normalizado para la UI
    recipesCount?: number;
 }
 
@@ -104,5 +108,33 @@ export interface LoginResponse {
    user?: User;
    token?: string;
    refreshToken?: string;
+   error?: string;
+}
+
+
+// Interface para actualizar perfil
+export interface UpdateProfileRequest {
+   name: string;
+   apellido: string;
+   email: string;
+   fechaNacimiento: string;
+   nacionalidad: string;
+}
+
+
+// Respuesta de la API de actualizar perfil
+export interface UpdateProfileApiResponse {
+   status: string;
+   message?: string;
+   data?: {
+       user: User;
+   };
+}
+
+
+// Respuesta simplificada para el servicio
+export interface UpdateProfileResponse {
+   success: boolean;
+   user?: User;
    error?: string;
 }

@@ -14,6 +14,10 @@ export const testUsers: User[] = [
        createdAt: '2024-01-01T00:00:00.000Z',
        updatedAt: '2024-01-01T00:00:00.000Z',
        __v: 0,
+       // Campos adicionales para edición de perfil
+       apellido: 'González',
+       fechaNacimiento: '1988-03-15',
+       nacionalidad: 'Argentina',
        // Campos adicionales para UI
        age: 35,
        nationality: 'Argentina',
@@ -29,9 +33,13 @@ export const testUsers: User[] = [
        createdAt: '2024-01-01T00:00:00.000Z',
        updatedAt: '2024-01-01T00:00:00.000Z',
        __v: 0,
+       // Campos adicionales para edición de perfil
+       apellido: 'Martínez',
+       fechaNacimiento: '1995-07-22',
+       nacionalidad: 'Argentina',
        // Campos adicionales para UI
        age: 28,
-       nationality: 'Argentino',
+       nationality: 'Argentina',
        recipesCount: 12
    }
 ];
@@ -139,6 +147,20 @@ export const UserManager = {
    // Obtener usuario actual
    getCurrentUser: (): User | null => {
        return currentUser;
+   },
+
+
+   // Actualizar usuario actual en memoria
+   updateCurrentUser: (updatedUser: User): void => {
+       console.log('DEBUG - Actualizando usuario en memoria:', {
+           antes: currentUser ? currentUser.name : 'null',
+           despues: updatedUser.name
+       });
+      
+       currentUser = updatedUser;
+       devLog('Usuario actualizado en memoria', { user: updatedUser.name });
+      
+       console.log('DEBUG - Usuario actualizado en currentUser:', currentUser);
    },
 
 
