@@ -22,12 +22,13 @@ export const APP_CONFIG = {
        RECIPES_PENDING: '/recipes/pending', // Recetas pendientes de aprobación
        RECIPE_APPROVE: '/recipes/:id/approve', // Aprobar receta (reemplazar :id)
        RECIPE_DELETE: '/recipes/:id', // Eliminar receta (reemplazar :id)
+       RECIPES_USER: '/recipes/user/:usuarioId', // Recetas de un usuario específico
    },
   
    // Configuración de desarrollo
    DEV: {
-       SHOW_LOCAL_LOGIN: __DEV__, // es por comando sino poner true/false a gusto Solo mostrar botón local en modo desarrollo
-       LOG_API_CALLS: __DEV__, // es por comando sino poner true/false a gusto Log de llamadas API en desarrollo
+       SHOW_LOCAL_LOGIN: false, // es por comando sino poner true/false a gusto Solo mostrar botón local en modo desarrollo
+       LOG_API_CALLS: false, // es por comando sino poner true/false a gusto Log de llamadas API en desarrollo
    }
 };
 
