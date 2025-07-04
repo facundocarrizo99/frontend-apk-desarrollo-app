@@ -52,6 +52,28 @@ export default function PerfilScreen() {
    };
 
 
+   // Función para navegar al detalle de la receta
+   const handleRecipePress = (recipe: Recipe) => {
+       router.push({
+           pathname: '/recipeDetail',
+           params: {
+               id: recipe._id,
+               titulo: getRecipeTitle(recipe),
+               descripcion: recipe.descripcion || '',
+               imagen: getRecipeImage(recipe),
+               autor: JSON.stringify(recipe.autor),
+               ingredientes: recipe.ingredientes ? JSON.stringify(recipe.ingredientes) : '[]',
+               pasos: recipe.pasos ? JSON.stringify(recipe.pasos) : '[]',
+               cantidadComensales: recipe.cantidadComensales?.toString() || '1',
+               tags: recipe.tags ? JSON.stringify(recipe.tags) : '[]',
+               valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
+               fechaCreacion: recipe.fechaCreacion || '',
+               fechaModificacion: recipe.fechaModificacion || '',
+           },
+       });
+   };
+
+
    // Función para cargar las recetas del usuario
    const loadUserRecipes = async (showRefreshIndicator = false) => {
        try {
@@ -192,7 +214,11 @@ export default function PerfilScreen() {
                ) : (
                    <View style={styles.recipesContainer}>
                        {userRecipes.map((recipe) => (
-                           <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
+                           <TouchableOpacity
+                               key={recipe._id}
+                               style={styles.recipeCard}
+                               onPress={() => handleRecipePress(recipe)}
+                           >
                                <ImageBackground
                                    source={{ uri: getRecipeImage(recipe) }}
                                    style={styles.recipeBackground}

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -101,6 +102,28 @@ export default function HomeScreen() {
    };
 
 
+   // Función para navegar al detalle de la receta
+   const handleRecipePress = (recipe: Recipe) => {
+       router.push({
+           pathname: '/recipeDetail',
+           params: {
+               id: recipe._id,
+               titulo: recipe.titulo || recipe.title || '',
+               descripcion: recipe.descripcion || '',
+               imagen: getRecipeImage(recipe),
+               autor: JSON.stringify(recipe.autor),
+               ingredientes: recipe.ingredientes ? JSON.stringify(recipe.ingredientes) : '[]',
+               pasos: recipe.pasos ? JSON.stringify(recipe.pasos) : '[]',
+               cantidadComensales: recipe.cantidadComensales?.toString() || '1',
+               tags: recipe.tags ? JSON.stringify(recipe.tags) : '[]',
+               valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
+               fechaCreacion: recipe.fechaCreacion || '',
+               fechaModificacion: recipe.fechaModificacion || '',
+           },
+       });
+   };
+
+
    if (loading) {
        return (
            <View style={styles.container}>
@@ -173,7 +196,11 @@ export default function HomeScreen() {
                {filteredRecipes.length > 0 ? (
                    <View style={styles.recipesContainer}>
                        {filteredRecipes.map((recipe) => (
-                           <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
+                           <TouchableOpacity
+                               key={recipe._id}
+                               style={styles.recipeCard}
+                               onPress={() => handleRecipePress(recipe)}
+                           >
                                <ImageBackground
                                    source={{ uri: getRecipeImage(recipe) }}
                                    style={styles.recipeBackground}
