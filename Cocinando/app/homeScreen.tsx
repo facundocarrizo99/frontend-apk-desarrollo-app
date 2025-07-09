@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
+    Alert,
     Image,
     ImageBackground,
     ScrollView,
@@ -17,6 +18,7 @@ import Header from '../components/Header';
 import { Recipe } from '../types/Recipie';
 import { RecipesService } from '../utils/recipesService';
 import { useAuthGuard } from '../utils/useAuthGuard';
+import { useFavorites } from '../utils/useFavorites';
 
 
 export default function HomeScreen() {
@@ -28,6 +30,9 @@ export default function HomeScreen() {
    const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
    const [loading, setLoading] = useState<boolean>(true);
    const [error, setError] = useState<string>('');
+  
+   // Hook para manejar favoritos
+   const { toggleFavorite, isFavorite, error: favoritesError } = useFavorites();
 
 
    // Cargar recetas al montar el componente
@@ -124,6 +129,23 @@ export default function HomeScreen() {
    };
 
 
+   // Función para manejar el toggle de favoritos
+   const handleFavoritePress = async (recipe: Recipe, event: any) => {
+       // Evitar que se ejecute el onPress de la receta
+       event.stopPropagation();
+      
+       const newFavoriteStatus = await toggleFavorite(recipe._id);
+      
+       if (favoritesError) {
+           Alert.alert(
+               'Error',
+               favoritesError,
+               [{ text: 'OK' }]
+           );
+       }
+   };
+
+
    if (loading) {
        return (
            <View style={styles.container}>
@@ -206,6 +228,19 @@ export default function HomeScreen() {
                                    style={styles.recipeBackground}
                                    imageStyle={styles.recipeBackgroundImage}
                                >
+                                   {/* Botón de favoritos */}
+                                   <TouchableOpacity
+                                       style={styles.favoriteButton}
+                                       onPress={(event) => handleFavoritePress(recipe, event)}
+                                   >
+                                       <Ionicons
+                                           name={isFavorite(recipe._id) ? "heart" : "heart-outline"}
+                                           size={24}
+                                           color={isFavorite(recipe._id) ? "#FF6B6B" : "white"}
+                                       />
+                                   </TouchableOpacity>
+
+
                                    {/* Footer con nombre de la receta y autor */}
                                    <View style={styles.recipeFooter}>
                                        <View style={styles.recipeInfo}>
@@ -434,5 +469,14 @@ const styles = StyleSheet.create({
    clearSearchText: {
        color: '#fff',
        fontWeight: 'bold',
+   },
+   favoriteButton: {
+       position: 'absolute',
+       top: 15,
+       right: 15,
+       backgroundColor: 'rgba(0, 0, 0, 0.5)',
+       borderRadius: 20,
+       padding: 8,
+       zIndex: 1,
    },
 });

@@ -8,7 +8,7 @@ export const APP_CONFIG = {
    // - Desarrollo local: 'http://localhost:3000/api'
    // - Servidor remoto: 'https://tu-api.com/api'
    // - Ngrok o similar: 'https://abc123.ngrok.io/api'
-   API_BASE_URL: 'https://backend-api-desarrollo-app.onrender.com/api', // <-- CAMBIAR POR TU URL
+   API_BASE_URL: 'https://backend-api-desarrollo-app.onrender.com/api', // URL actualizada
   
    // Endpoints
    ENDPOINTS: {
@@ -24,12 +24,15 @@ export const APP_CONFIG = {
        RECIPE_APPROVE: '/recipes/:id/approve', // Aprobar receta (reemplazar :id)
        RECIPE_DELETE: '/recipes/:id', // Eliminar receta (reemplazar :id)
        RECIPES_USER: '/recipes/user/:usuarioId', // Recetas de un usuario específico
+       FAVORITES_GET: '/user/users/me/favorites', // Obtener favoritos del usuario
+       FAVORITES_ADD: '/user/users/me/favorites/:recipeId', // Agregar a favoritos
+       FAVORITES_REMOVE: '/user/users/me/favorites/:recipeId', // Remover de favoritos
    },
   
    // Configuración de desarrollo
    DEV: {
-       SHOW_LOCAL_LOGIN: false, // es por comando sino poner true/false a gusto Solo mostrar botón local en modo desarrollo
-       LOG_API_CALLS: false, // es por comando sino poner true/false a gusto Log de llamadas API en desarrollo
+       SHOW_LOCAL_LOGIN: false, //__DEV__, // Automático: true en desarrollo, false en producción
+       LOG_API_CALLS: false // __DEV__, // Automático: logs solo en desarrollo
    }
 };
 
@@ -40,3 +43,5 @@ export const devLog = (message: string, data?: any) => {
        console.log(`[DEV] ${message}`, data || '');
    }
 };
+
+
