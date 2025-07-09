@@ -27,6 +27,11 @@ export const APP_CONFIG = {
        FAVORITES_GET: '/user/users/me/favorites', // Obtener favoritos del usuario
        FAVORITES_ADD: '/user/users/me/favorites/:recipeId', // Agregar a favoritos
        FAVORITES_REMOVE: '/user/users/me/favorites/:recipeId', // Remover de favoritos
+       COMMENTS_CREATE: '/comentarios', // Crear comentario
+       COMMENTS_BY_RECIPE: '/comentarios/receta/:recetaId', // Obtener comentarios aprobados por receta
+       COMMENTS_PENDING: '/comentarios/pendientes', // Obtener comentarios pendientes (Admin)
+       COMMENTS_APPROVE: '/comentarios/:id/aprobar', // Aprobar comentario (Admin)
+       COMMENTS_DELETE: '/comentarios/:id', // Eliminar comentario (Admin)
    },
   
    // Configuración de desarrollo
