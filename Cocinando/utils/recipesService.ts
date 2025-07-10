@@ -285,5 +285,254 @@ export const RecipesService = {
                 error: 'Error de conexión al crear la receta'
             };
         }
+    },
+
+    // === MÉTODOS DE BÚSQUEDA AVANZADA ===
+
+    // Obtener nombres de recetas
+    getRecipeNames: async (): Promise<{ success: boolean; names?: string[]; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            
+            if (!token) {
+                devLog('No hay token de autenticación disponible para obtener nombres de recetas');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+
+            devLog('Obteniendo nombres de recetas');
+            
+            const response = await fetch(`${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.SEARCH_RECIPE_NAMES}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            devLog('Respuesta de API nombres de recetas:', data);
+
+            if (response.ok && data.status === 'success') {
+                return {
+                    success: true,
+                    names: data.data?.nombres || []
+                };
+            } else {
+                return {
+                    success: false,
+                    error: data.message || 'Error al obtener nombres de recetas'
+                };
+            }
+        } catch (error) {
+            console.error('Error al obtener nombres de recetas:', error);
+            devLog('Error de conexión al obtener nombres de recetas', error);
+            
+            return {
+                success: false,
+                error: 'Error de conexión'
+            };
+        }
+    },
+
+    // Obtener nombres de ingredientes
+    getIngredientNames: async (): Promise<{ success: boolean; names?: string[]; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            
+            if (!token) {
+                devLog('No hay token de autenticación disponible para obtener nombres de ingredientes');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+
+            devLog('Obteniendo nombres de ingredientes');
+            
+            const response = await fetch(`${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.SEARCH_INGREDIENT_NAMES}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data = await response.json();
+            devLog('Respuesta de API nombres de ingredientes:', data);
+
+            if (response.ok && data.status === 'success') {
+                return {
+                    success: true,
+                    names: data.data?.nombres || []
+                };
+            } else {
+                return {
+                    success: false,
+                    error: data.message || 'Error al obtener nombres de ingredientes'
+                };
+            }
+        } catch (error) {
+            console.error('Error al obtener nombres de ingredientes:', error);
+            devLog('Error de conexión al obtener nombres de ingredientes', error);
+            
+            return {
+                success: false,
+                error: 'Error de conexión'
+            };
+        }
+    },
+
+    // Filtrar por ingrediente
+    filterByIngredient: async (ingrediente: string): Promise<{ success: boolean; recipes?: Recipe[]; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            
+            if (!token) {
+                devLog('No hay token de autenticación disponible para filtrar por ingrediente');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+
+            devLog(`Filtrando recetas por ingrediente: ${ingrediente}`);
+            
+            const url = `${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.SEARCH_BY_INGREDIENT.replace(':ingrediente', encodeURIComponent(ingrediente))}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data: RecipesApiResponse = await response.json();
+            devLog('Respuesta de API filtrar por ingrediente:', data);
+
+            if (response.ok && data.status === 'success') {
+                return {
+                    success: true,
+                    recipes: data.data.recetas || []
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Error al filtrar por ingrediente'
+                };
+            }
+        } catch (error) {
+            console.error('Error al filtrar por ingrediente:', error);
+            devLog('Error de conexión al filtrar por ingrediente', error);
+            
+            return {
+                success: false,
+                error: 'Error de conexión'
+            };
+        }
+    },
+
+    // Filtrar por NO ingrediente
+    filterByNotIngredient: async (ingrediente: string): Promise<{ success: boolean; recipes?: Recipe[]; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            
+            if (!token) {
+                devLog('No hay token de autenticación disponible para filtrar por NO ingrediente');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+
+            devLog(`Filtrando recetas que NO contengan: ${ingrediente}`);
+            
+            const url = `${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.SEARCH_BY_NOT_INGREDIENT.replace(':ingrediente', encodeURIComponent(ingrediente))}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data: RecipesApiResponse = await response.json();
+            devLog('Respuesta de API filtrar por NO ingrediente:', data);
+
+            if (response.ok && data.status === 'success') {
+                return {
+                    success: true,
+                    recipes: data.data.recetas || []
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Error al filtrar por NO ingrediente'
+                };
+            }
+        } catch (error) {
+            console.error('Error al filtrar por NO ingrediente:', error);
+            devLog('Error de conexión al filtrar por NO ingrediente', error);
+            
+            return {
+                success: false,
+                error: 'Error de conexión'
+            };
+        }
+    },
+
+    // Filtrar por tags
+    filterByTags: async (tags: string[]): Promise<{ success: boolean; recipes?: Recipe[]; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            
+            if (!token) {
+                devLog('No hay token de autenticación disponible para filtrar por tags');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+
+            const tagsString = tags.join(',');
+            devLog(`Filtrando recetas por tags: ${tagsString}`);
+            
+            const url = `${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.SEARCH_BY_TAGS.replace(':tags', encodeURIComponent(tagsString))}`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            const data: RecipesApiResponse = await response.json();
+            devLog('Respuesta de API filtrar por tags:', data);
+
+            if (response.ok && data.status === 'success') {
+                return {
+                    success: true,
+                    recipes: data.data.recetas || []
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'Error al filtrar por tags'
+                };
+            }
+        } catch (error) {
+            console.error('Error al filtrar por tags:', error);
+            devLog('Error de conexión al filtrar por tags', error);
+            
+            return {
+                success: false,
+                error: 'Error de conexión'
+            };
+        }
     }
 }; 

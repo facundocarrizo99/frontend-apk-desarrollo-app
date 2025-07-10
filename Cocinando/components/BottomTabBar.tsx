@@ -18,7 +18,7 @@ export default function BottomTabBar() {
                 router.push('/homeScreen');
                 break;
             case 'buscar':
-                showInfo('La función de búsqueda estará disponible pronto.');
+                router.push('/buscarReceta');
                 break;
             case 'añadir':
                 router.push('/crearReceta');

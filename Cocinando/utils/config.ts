@@ -33,6 +33,12 @@ export const APP_CONFIG = {
        COMMENTS_PENDING: '/comentarios/pendientes', // Obtener comentarios pendientes (Admin)
        COMMENTS_APPROVE: '/comentarios/:id/aprobar', // Aprobar comentario (Admin)
        COMMENTS_DELETE: '/comentarios/:id', // Eliminar comentario (Admin)
+        // Búsqueda avanzada
+       SEARCH_RECIPE_NAMES: '/recipes/names', // Obtener nombres de recetas
+       SEARCH_INGREDIENT_NAMES: '/recipes/ingredients/names', // Obtener nombres de ingredientes
+       SEARCH_BY_INGREDIENT: '/recipes/ingredient/:ingrediente', // Filtrar por ingrediente
+       SEARCH_BY_NOT_INGREDIENT: '/recipes/not-ingredient/:ingrediente', // Filtrar por NO ingrediente
+       SEARCH_BY_TAGS: '/recipes/tags/:tags', // Filtrar por tags
    },
   
    // Configuración de desarrollo
