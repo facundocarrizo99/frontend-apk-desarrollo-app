@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
     Image,
     ImageBackground,
     Modal,
@@ -13,10 +12,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
 import { Comment, Recipe } from '../types/Recipie';
 import { CommentsService } from '../utils/commentsService';
+import { useAlert } from '../utils/useAlert';
 import { UserManager } from '../utils/userManager';
 
 export default function RecipeDetail() {
@@ -48,6 +49,9 @@ export default function RecipeDetail() {
     const [newRating, setNewRating] = useState(5);
     const [submittingComment, setSubmittingComment] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    
+    // Hook para alertas
+    const { alertState, showError, showSuccess, hideAlert, handleConfirm, handleCancel } = useAlert();
 
     // Verificar si el usuario está logueado
     useEffect(() => {
@@ -118,7 +122,7 @@ export default function RecipeDetail() {
     // Función para enviar comentario
     const handleSubmitComment = async () => {
         if (!newComment.trim()) {
-            Alert.alert('Error', 'Por favor ingresa un comentario');
+            showError('Por favor ingresa un comentario');
             return;
         }
 
@@ -134,12 +138,12 @@ export default function RecipeDetail() {
                 setNewComment('');
                 setNewRating(5);
                 setShowAddCommentModal(false);
-                Alert.alert('Éxito', 'Comentario enviado. Será revisado por un administrador antes de ser publicado.');
+                showSuccess('Comentario enviado. Será revisado por un administrador antes de ser publicado.');
             } else {
-                Alert.alert('Error', response.error || 'Error al enviar comentario');
+                showError(response.error || 'Error al enviar comentario');
             }
         } catch (error) {
-            Alert.alert('Error', 'Error de conexión');
+            showError('Error de conexión');
         } finally {
             setSubmittingComment(false);
         }
@@ -147,7 +151,7 @@ export default function RecipeDetail() {
 
     const handleAddComment = () => {
         if (!isLoggedIn) {
-            Alert.alert('Inicia sesión', 'Debes iniciar sesión para comentar');
+            showError('Debes iniciar sesión para comentar');
             return;
         }
         setShowAddCommentModal(true);
@@ -357,6 +361,14 @@ export default function RecipeDetail() {
                     </View>
                 </View>
             </Modal>
+            
+            {/* Modal de Alertas */}
+            <AlertModal
+                alertState={alertState}
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
+                onClose={hideAlert}
+            />
         </View>
     );
 }
@@ -702,4 +714,4 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
-});
+}); 

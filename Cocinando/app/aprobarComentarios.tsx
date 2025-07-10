@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
 import { Comment } from '../types/Recipie';
 import { CommentsService } from '../utils/commentsService';
+import { useAlert } from '../utils/useAlert';
 import { useAuthGuard } from '../utils/useAuthGuard';
 
 export default function AprobarComentariosScreen() {
@@ -19,6 +21,9 @@ export default function AprobarComentariosScreen() {
     const [confirmAction, setConfirmAction] = useState<'approve' | 'reject' | null>(null);
     const [selectedComment, setSelectedComment] = useState<{id: string, author: string} | null>(null);
     const [successMessage, setSuccessMessage] = useState('');
+    
+    // Hook para alertas
+    const { alertState, showError, hideAlert, handleConfirm, handleCancel } = useAlert();
 
     // Cargar comentarios pendientes
     useEffect(() => {
@@ -81,10 +86,10 @@ export default function AprobarComentariosScreen() {
                 
                 setSuccessVisible(true);
             } else {
-                Alert.alert('Error', response.error || 'Error al procesar la acción');
+                showError(response.error || 'Error al procesar la acción');
             }
         } catch (error) {
-            Alert.alert('Error', 'Error de conexión');
+            showError('Error de conexión');
         }
         
         setSelectedComment(null);
@@ -260,6 +265,14 @@ export default function AprobarComentariosScreen() {
                     </View>
                 </View>
             </Modal>
+            
+            {/* Modal de Alertas */}
+            <AlertModal
+                alertState={alertState}
+                onConfirm={handleConfirm}
+                onCancel={handleCancel}
+                onClose={hideAlert}
+            />
         </View>
     );
 }
