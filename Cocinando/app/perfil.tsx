@@ -1,52 +1,119 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
-import { Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ImageBackground, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import { Recipe } from '../types/Recipie';
+import { RecipesService } from '../utils/recipesService';
+import { useAuthGuard } from '../utils/useAuthGuard';
 import { UserManager } from '../utils/userManager';
 
 
-const getMyRecipes = (user: any) => [
-   {
-       id: '1',
-       title: 'Rosquitas de naranja',
-       image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
-       author: user.name,
-       authorAvatar: user.avatar
-   },
-   {
-       id: '2',
-       title: 'Milanesas de pescado',
-       image: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=400&h=300&fit=crop',
-       author: user.name,
-       authorAvatar: user.avatar
-   },
-   {
-       id: '3',
-       title: 'Arroz primavera',
-       image: 'https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop',
-       author: user.name,
-       authorAvatar: user.avatar
-   },
-   {
-       id: '4',
-       title: 'Empanadas caseras',
-       image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop',
-       author: user.name,
-       authorAvatar: user.avatar
-   },
-];
-
-
 export default function PerfilScreen() {
+   // Proteger la ruta
+   useAuthGuard();
+  
    const user = UserManager.getCurrentUser();
   
-   // Si no hay usuario logueado, redirigir al login
+   // Estados para las recetas del usuario
+   const [userRecipes, setUserRecipes] = useState<Recipe[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [error, setError] = useState<string | null>(null);
+   const [refreshing, setRefreshing] = useState(false);
+
+
+   // El AuthGuard ya se encarga de la autenticación
+   // Si llegamos aquí, el usuario está autenticado
    if (!user) {
-       router.replace('/login');
+       // Esto no debería pasar, pero por seguridad
        return null;
    }
+
+
+   // Funciones helper para compatibilidad de datos (como en homeScreen)
+   const getRecipeTitle = (recipe: Recipe): string => {
+       return recipe.titulo || recipe.title || 'Sin título';
+   };
+
+
+   const getRecipeImage = (recipe: Recipe): string => {
+       return recipe.imagen || recipe.image || 'https://images.unsplash.com/photo-1546548970-71785318a17b?w=400&h=300&fit=crop';
+   };
+
+
+   const getAuthorName = (recipe: Recipe): string => {
+       return recipe.autor?.name || recipe.author?.name || 'Autor desconocido';
+   };
+
+
+   const getAuthorAvatar = (recipe: Recipe): string => {
+       return recipe.autor?.avatar || recipe.author?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg';
+   };
+
+
+   // Función para navegar al detalle de la receta
+   const handleRecipePress = (recipe: Recipe) => {
+       router.push({
+           pathname: '/recipeDetail',
+           params: {
+               id: recipe._id,
+               titulo: getRecipeTitle(recipe),
+               descripcion: recipe.descripcion || '',
+               imagen: getRecipeImage(recipe),
+               autor: JSON.stringify(recipe.autor),
+               ingredientes: recipe.ingredientes ? JSON.stringify(recipe.ingredientes) : '[]',
+               pasos: recipe.pasos ? JSON.stringify(recipe.pasos) : '[]',
+               cantidadComensales: recipe.cantidadComensales?.toString() || '1',
+               tags: recipe.tags ? JSON.stringify(recipe.tags) : '[]',
+               valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
+               fechaCreacion: recipe.fechaCreacion || '',
+               fechaModificacion: recipe.fechaModificacion || '',
+           },
+       });
+   };
+
+
+   // Función para cargar las recetas del usuario
+   const loadUserRecipes = async (showRefreshIndicator = false) => {
+       try {
+           if (showRefreshIndicator) {
+               setRefreshing(true);
+           } else {
+               setLoading(true);
+           }
+           setError(null);
+
+
+           const result = await RecipesService.getUserRecipes(user._id);
+          
+                        if (result.success && result.recipes) {
+               setUserRecipes(result.recipes);
+           } else {
+               setError(result.error || 'Error al cargar las recetas del usuario');
+               setUserRecipes([]);
+           }
+       } catch (err) {
+           console.error('Error al cargar recetas del usuario:', err);
+           setError('Error de conexión');
+           setUserRecipes([]);
+       } finally {
+           setLoading(false);
+           setRefreshing(false);
+       }
+   };
+
+
+   // Cargar recetas cuando se monte el componente
+   useEffect(() => {
+       loadUserRecipes();
+   }, [user._id]);
+
+
+   // Handler para refresh
+   const onRefresh = () => {
+       loadUserRecipes(true);
+   };
 
 
    const handleEditProfile = () => {
@@ -54,11 +121,53 @@ export default function PerfilScreen() {
    };
 
 
+   // Renderizar mensaje de error
+   const renderError = () => (
+       <View style={styles.messageContainer}>
+           <Ionicons name="alert-circle-outline" size={48} color="#ff6b6b" />
+           <Text style={styles.errorText}>{error}</Text>
+           <TouchableOpacity style={styles.retryButton} onPress={() => loadUserRecipes()}>
+               <Text style={styles.retryButtonText}>Reintentar</Text>
+           </TouchableOpacity>
+       </View>
+   );
+
+
+   // Renderizar mensaje cuando no hay recetas
+   const renderEmptyState = () => (
+       <View style={styles.messageContainer}>
+           <Ionicons name="restaurant-outline" size={48} color="#999" />
+           <Text style={styles.emptyText}>Aún no tienes recetas publicadas</Text>
+           <Text style={styles.emptySubtext}>¡Comparte tu primera receta y aparecerá aquí!</Text>
+       </View>
+   );
+
+
+   // Renderizar loading de recetas
+   const renderRecipesLoading = () => (
+       <View style={styles.loadingContainer}>
+           <ActivityIndicator size="large" color="#C4B04E" />
+           <Text style={styles.loadingText}>Cargando tus recetas...</Text>
+       </View>
+   );
+
+
    return (
        <View style={styles.container}>
            <Header />
           
-           <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+           <ScrollView
+               style={styles.content}
+               showsVerticalScrollIndicator={false}
+               refreshControl={
+                   <RefreshControl
+                       refreshing={refreshing}
+                       onRefresh={onRefresh}
+                       colors={['#C4B04E']}
+                       tintColor="#C4B04E"
+                   />
+               }
+           >
                {/* Card de perfil del usuario */}
                <View style={styles.profileCard}>
                    <View style={styles.profileHeader}>
@@ -69,15 +178,15 @@ export default function PerfilScreen() {
                                <View style={styles.profileStats}>
                                    <View style={styles.statItem}>
                                        <Ionicons name="calendar-outline" size={16} color="#4C5F00" />
-                                       <Text style={styles.statText}>{user.age} años</Text>
+                                       <Text style={styles.statText}>{user.age || 25} años</Text>
                                    </View>
                                    <View style={styles.statItem}>
                                        <Ionicons name="flag-outline" size={16} color="#4C5F00" />
-                                       <Text style={styles.statText}>{user.nationality}</Text>
+                                       <Text style={styles.statText}>{user.nationality || 'Argentina'}</Text>
                                    </View>
                                    <View style={styles.statItem}>
                                        <Ionicons name="restaurant-outline" size={16} color="#4C5F00" />
-                                       <Text style={styles.statText}>{user.recipesCount} recetas</Text>
+                                       <Text style={styles.statText}>{userRecipes.length} recetas</Text>
                                    </View>
                                </View>
                            </View>
@@ -95,30 +204,42 @@ export default function PerfilScreen() {
                <Text style={styles.sectionTitle}>Mis Recetas</Text>
 
 
-               {/* Lista de recetas */}
-               <View style={styles.recipesContainer}>
-                   {getMyRecipes(user).map((recipe) => (
-                       <TouchableOpacity key={recipe.id} style={styles.recipeCard}>
-                           <ImageBackground
-                               source={{ uri: recipe.image }}
-                               style={styles.recipeBackground}
-                               imageStyle={styles.recipeBackgroundImage}
+               {/* Contenido dinámico de recetas */}
+               {loading ? (
+                   renderRecipesLoading()
+               ) : error ? (
+                   renderError()
+               ) : userRecipes.length === 0 ? (
+                   renderEmptyState()
+               ) : (
+                   <View style={styles.recipesContainer}>
+                       {userRecipes.map((recipe) => (
+                           <TouchableOpacity
+                               key={recipe._id}
+                               style={styles.recipeCard}
+                               onPress={() => handleRecipePress(recipe)}
                            >
-                               {/* Header de la receta con autor */}
-                               <View style={styles.recipeHeader}>
-                                   <Image source={{ uri: recipe.authorAvatar }} style={styles.authorAvatar} />
-                                   <Text style={styles.authorName}>{recipe.author}</Text>
-                               </View>
+                               <ImageBackground
+                                   source={{ uri: getRecipeImage(recipe) }}
+                                   style={styles.recipeBackground}
+                                   imageStyle={styles.recipeBackgroundImage}
+                               >
+                                   {/* Header de la receta con autor */}
+                                   <View style={styles.recipeHeader}>
+                                       <Image source={{ uri: getAuthorAvatar(recipe) }} style={styles.authorAvatar} />
+                                       <Text style={styles.authorName}>{getAuthorName(recipe)}</Text>
+                                   </View>
 
 
-                               {/* Footer con nombre de la receta */}
-                               <View style={styles.recipeFooter}>
-                                   <Text style={styles.recipeTitle}>{recipe.title}</Text>
-                               </View>
-                           </ImageBackground>
-                       </TouchableOpacity>
-                   ))}
-               </View>
+                                   {/* Footer con nombre de la receta */}
+                                   <View style={styles.recipeFooter}>
+                                       <Text style={styles.recipeTitle}>{getRecipeTitle(recipe)}</Text>
+                                   </View>
+                               </ImageBackground>
+                           </TouchableOpacity>
+                       ))}
+                   </View>
+               )}
            </ScrollView>
 
 
@@ -272,5 +393,51 @@ const styles = StyleSheet.create({
        textShadowColor: 'rgba(0, 0, 0, 0.75)',
        textShadowOffset: { width: 1, height: 1 },
        textShadowRadius: 2,
+   },
+   // Nuevos estilos para los estados
+   loadingContainer: {
+       alignItems: 'center',
+       paddingVertical: 40,
+   },
+   loadingText: {
+       marginTop: 16,
+       fontSize: 16,
+       color: '#666',
+   },
+   messageContainer: {
+       alignItems: 'center',
+       paddingVertical: 40,
+       paddingHorizontal: 20,
+   },
+   errorText: {
+       marginTop: 16,
+       fontSize: 16,
+       color: '#ff6b6b',
+       textAlign: 'center',
+       marginBottom: 20,
+   },
+   emptyText: {
+       marginTop: 16,
+       fontSize: 18,
+       color: '#666',
+       textAlign: 'center',
+       fontWeight: 'bold',
+   },
+   emptySubtext: {
+       marginTop: 8,
+       fontSize: 14,
+       color: '#999',
+       textAlign: 'center',
+   },
+   retryButton: {
+       backgroundColor: '#C4B04E',
+       paddingHorizontal: 20,
+       paddingVertical: 10,
+       borderRadius: 20,
+   },
+   retryButtonText: {
+       color: '#fff',
+       fontSize: 16,
+       fontWeight: 'bold',
    },
 });

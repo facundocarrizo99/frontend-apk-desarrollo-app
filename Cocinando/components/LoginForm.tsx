@@ -2,6 +2,7 @@ import Checkbox from 'expo-checkbox';
 import { router } from "expo-router";
 import { useState } from 'react';
 import {
+    ActivityIndicator,
     Modal,
     Platform,
     StyleSheet,
@@ -10,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { APP_CONFIG, devLog } from '../utils/config';
 import { UserManager } from '../utils/userManager';
 
 
@@ -18,48 +20,77 @@ export default function LoginForm() {
    const [password, setPassword] = useState<string>('');
    const [remember, setRemember] = useState<boolean>(false);
    const [errorVisible, setErrorVisible] = useState<boolean>(false);
+   const [loading, setLoading] = useState<boolean>(false);
+   const [errorMessage, setErrorMessage] = useState<string>('');
 
 
-   const handleSubmit= async () => {
+   const handleSubmit = async () => {
        if (!email || !password) {
+           setErrorMessage('Por favor completa todos los campos');
            setErrorVisible(true);
            return;
        }
 
 
-       // Intentar login con el sistema de usuarios
-       const user = UserManager.login(email, password);
-      
-       if (user) {
-           // Login exitoso
-           router.replace('/homeScreen');
-       } else {
-           // Login fallido
+       setLoading(true);
+       devLog('Iniciando login', { email, useAPI: APP_CONFIG.USE_API });
+
+
+       try {
+           if (APP_CONFIG.USE_API) {
+               // Usar API real
+               const result = await UserManager.login(email, password);
+              
+               if (result.success && result.user) {
+                   // Login exitoso
+                   devLog('Login exitoso con API', result.user);
+                   setLoading(false);
+                   router.replace('/homeScreen');
+               } else {
+                   // Login fallido
+                   devLog('Login fallido con API', result.error);
+                   setLoading(false);
+                   setErrorMessage(result.error || 'Error al iniciar sesión');
+                   setErrorVisible(true);
+               }
+           } else {
+               // Usar login local para desarrollo
+               handleLocalLogin();
+               setLoading(false);
+           }
+       } catch (error) {
+           devLog('Error en login', error);
+           setLoading(false);
+           setErrorMessage('Error de conexión. Verifica tu internet.');
            setErrorVisible(true);
+       }
+   };
+
+
+   const handleLocalLogin = () => {
+       // Función auxiliar para testing con usuarios locales
+       if (!email || !password) {
+           setErrorMessage('Por favor completa todos los campos');
+           setErrorVisible(true);
+           return;
        }
 
 
-       //TODO: Consultar API para iniciar sesión real
-       // try {
-       //     const response = await fetch('http://localhost:8080/api/login', {
-       //         method: 'POST',
-       //         headers: { 'Content-Type': 'application/json' },
-       //         body: JSON.stringify({ email, password }),
-       //     });
-       //
-       //     const data = await response.json();
-       //
-       //     if (response.ok) {
-       //         // Login successful, handle user data
-       //         console.log('Login success:', data);
-       //         router.replace('/homeScreen');
-       //     } else {
-       //         // Login failed, show error
-       //         setErrorVisible(true);
-       //     }
-       // } catch (error) {
-       //     setErrorVisible(true);
-       // }
+       const result = UserManager.loginLocal(email, password);
+      
+       if (result.success && result.user) {
+           devLog('Login local exitoso', result.user);
+           router.replace('/homeScreen');
+       } else {
+           setErrorMessage(
+               `Credenciales incorrectas.\n\n` +
+               `Usuarios de prueba:\n` +
+               `Admin: admin@cocinando.org\n` +
+               `Alumno: pedro.perez@email.com\n` +
+               `Contraseña: 123456`
+           );
+           setErrorVisible(true);
+       }
    };
 
 
@@ -74,6 +105,9 @@ export default function LoginForm() {
                    style={styles.input}
                    value={email}
                    onChangeText={setEmail}
+                   editable={!loading}
+                   autoCapitalize="none"
+                   keyboardType="email-address"
                />
                <TextInput
                    placeholder="Contraseña"
@@ -81,21 +115,42 @@ export default function LoginForm() {
                    style={styles.input}
                    value={password}
                    onChangeText={setPassword}
+                   editable={!loading}
                />
 
 
                <View style={styles.checkboxContainer}>
-                   <Checkbox value={remember} onValueChange={setRemember} />
+                   <Checkbox value={remember} onValueChange={setRemember} disabled={loading} />
                    <Text style={styles.checkboxLabel}>Recordar mis datos</Text>
                </View>
 
 
-               <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                   <Text style={styles.buttonText}>Enviar</Text>
+               <TouchableOpacity
+                   style={[styles.button, loading && styles.buttonDisabled]}
+                   onPress={handleSubmit}
+                   disabled={loading}
+               >
+                   {loading ? (
+                       <ActivityIndicator color="#fff" size="small" />
+                   ) : (
+                       <Text style={styles.buttonText}>Enviar</Text>
+                   )}
                </TouchableOpacity>
 
 
-               <TouchableOpacity onPress={() => router.push('/recuperarPassword')}>
+               {/* Botón de desarrollo para login local */}
+               {APP_CONFIG.DEV.SHOW_LOCAL_LOGIN && (
+                   <TouchableOpacity
+                       style={[styles.button, styles.devButton]}
+                       onPress={handleLocalLogin}
+                       disabled={loading}
+                   >
+                       <Text style={styles.buttonText}>Login Local (Dev)</Text>
+                   </TouchableOpacity>
+               )}
+
+
+               <TouchableOpacity onPress={() => router.push('/(auth)/recuperarPassword' as any)}>
                    <Text style={styles.forgotPassword}>Olvidé mi contraseña</Text>
                </TouchableOpacity>
            </View>
@@ -113,11 +168,7 @@ export default function LoginForm() {
                        <Text style={styles.modalWarning}>⚠️</Text>
                        <Text style={styles.modalTitle}>Error al iniciar sesión</Text>
                        <Text style={styles.modalText}>
-                           Credenciales incorrectas.{"\n\n"}
-                           Usuarios de prueba:{"\n"}
-                           Admin: admin@cocinando.org{"\n"}
-                           Alumno: pedro.perez@email.com{"\n"}
-                           Contraseña: cualquier texto
+                           {errorMessage}
                        </Text>
                        <TouchableOpacity
                            style={styles.modalButton}
@@ -180,6 +231,13 @@ const styles = StyleSheet.create({
    buttonText: {
        color: '#fff',
        fontWeight: 'bold',
+   },
+   buttonDisabled: {
+       backgroundColor: '#ccc',
+   },
+   devButton: {
+       backgroundColor: '#007bff',
+       marginTop: 10,
    },
    forgotPassword: {
        color: '#1C1C1C',
