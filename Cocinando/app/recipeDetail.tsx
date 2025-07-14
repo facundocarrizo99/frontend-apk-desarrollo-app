@@ -50,6 +50,19 @@ export default function RecipeDetail() {
     const [submittingComment, setSubmittingComment] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     
+    // Estados para la calculadora de comensales
+    const baseComensales = typeof recipe.cantidadComensales === 'number' && !isNaN(recipe.cantidadComensales) ? recipe.cantidadComensales : 1;
+    const [selectedComensales, setSelectedComensales] = useState(baseComensales);
+
+    // Calcular ingredientes ajustados
+    const getAdjustedIngredients = () => {
+        if (!recipe.ingredientes) return [];
+        return recipe.ingredientes.map(ing => ({
+            ...ing,
+            cantidad: Math.round((ing.cantidad * selectedComensales / baseComensales) * 100) / 100
+        }));
+    };
+    
     // Hook para alertas
     const { alertState, showError, showSuccess, hideAlert, handleConfirm, handleCancel } = useAlert();
 
@@ -262,7 +275,27 @@ export default function RecipeDetail() {
                     {recipe.ingredientes && recipe.ingredientes.length > 0 && (
                         <View style={styles.section}>
                             <Text style={styles.sectionTitle}>Ingredientes</Text>
-                            {recipe.ingredientes.map((ingredient, index) => (
+                            {/* Selector de comensales */}
+                            <View style={styles.peopleSelectorContainer}>
+                                <Text style={styles.peopleSelectorLabel}>Cantidad de personas:</Text>
+                                <View style={styles.peopleSelectorStepper}>
+                                    <TouchableOpacity
+                                        style={styles.peopleSelectorButton}
+                                        onPress={() => setSelectedComensales(c => Math.max(1, c - 1))}
+                                    >
+                                        <Ionicons name="remove-circle-outline" size={24} color="#4C5F00" />
+                                    </TouchableOpacity>
+                                    <Text style={styles.peopleSelectorValue}>{selectedComensales}</Text>
+                                    <TouchableOpacity
+                                        style={styles.peopleSelectorButton}
+                                        onPress={() => setSelectedComensales(c => c + 1)}
+                                    >
+                                        <Ionicons name="add-circle-outline" size={24} color="#4C5F00" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                            {/* Lista de ingredientes ajustados */}
+                            {getAdjustedIngredients().map((ingredient, index) => (
                                 <View key={index} style={styles.ingredientItem}>
                                     <View style={styles.ingredientBullet} />
                                     <Text style={styles.ingredientText}>
@@ -752,5 +785,37 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: '600',
+    },
+    // Estilos para la calculadora de comensales
+    peopleSelectorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+        gap: 10,
+    },
+    peopleSelectorLabel: {
+        fontSize: 15,
+        color: '#4C5F00',
+        fontWeight: 'bold',
+        marginRight: 10,
+    },
+    peopleSelectorStepper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F0F0E0',
+        borderRadius: 16,
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        gap: 8,
+    },
+    peopleSelectorButton: {
+        padding: 4,
+    },
+    peopleSelectorValue: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#4C5F00',
+        minWidth: 28,
+        textAlign: 'center',
     },
 }); 
