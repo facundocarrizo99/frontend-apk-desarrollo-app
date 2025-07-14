@@ -8,7 +8,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -20,88 +19,55 @@ import { RecipesService } from '../utils/recipesService';
 import { useAlert } from '../utils/useAlert';
 import { useAuthGuard } from '../utils/useAuthGuard';
 import { useFavorites } from '../utils/useFavorites';
+import { UserManager } from '../utils/userManager';
 
-export default function HomeScreen() {
-    // Proteger la ruta
+export default function MisRecetasScreen() {
     useAuthGuard();
-    
-    const [searchText, setSearchText] = useState<string>('');
-    const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
-    const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
+    const [myRecipes, setMyRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
-    
-    // Hook para manejar favoritos
+
+    // Favoritos (opcional, igual que en homeScreen)
     const { toggleFavorite, isFavorite, error: favoritesError } = useFavorites();
-    
-    // Hook para alertas
     const { alertState, showError, hideAlert, handleConfirm, handleCancel } = useAlert();
 
-    // Cargar recetas al montar el componente
     useEffect(() => {
-        loadRecipes();
+        loadMyRecipes();
     }, []);
 
-    const loadRecipes = async () => {
+    const loadMyRecipes = async () => {
         setLoading(true);
         setError('');
-        
         try {
-            const result = await RecipesService.getApprovedRecipes();
-            
+            const result = await RecipesService.getUserRecipes(UserManager.getCurrentUser()?._id || '');
             if (result.success && result.recipes) {
-                setAllRecipes(result.recipes);
-                setFilteredRecipes(result.recipes);
+                setMyRecipes(result.recipes);
             } else {
-                setError(result.error || 'Error al cargar recetas');
-                // Usar recetas de fallback en caso de error
-                const fallbackRecipes = RecipesService.getFallbackRecipes();
-                setAllRecipes(fallbackRecipes);
-                setFilteredRecipes(fallbackRecipes);
+                setError(result.error || 'Error al cargar tus recetas');
+                setMyRecipes([]);
             }
         } catch (err) {
-            console.error('Error al cargar recetas:', err);
             setError('Error de conexión');
-            // Usar recetas de fallback en caso de error
-            const fallbackRecipes = RecipesService.getFallbackRecipes();
-            setAllRecipes(fallbackRecipes);
-            setFilteredRecipes(fallbackRecipes);
+            setMyRecipes([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSearch = () => {
-        const results = RecipesService.searchRecipes(allRecipes, searchText);
-        setFilteredRecipes(results);
-    };
-
-    const clearSearch = () => {
-        setSearchText('');
-        setFilteredRecipes(allRecipes);
-    };
-
-    // Función para obtener el avatar del autor con fallback
+    // Avatar y nombre del autor (debería ser el usuario logueado, pero por consistencia)
     const getAuthorAvatar = (recipe: Recipe): string => {
         return recipe.autor?.avatar || recipe.author?.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg';
     };
-
-    // Función para obtener el nombre del autor con fallback
     const getAuthorName = (recipe: Recipe): string => {
-        return recipe.autor?.name || recipe.author?.name || 'Autor desconocido';
+        return recipe.autor?.name || recipe.author?.name || 'Tú';
     };
-
-    // Función para obtener el título de la receta con fallback
     const getRecipeTitle = (recipe: Recipe): string => {
         return recipe.titulo || recipe.title || 'Sin título';
     };
-
-    // Función para obtener la imagen de la receta con fallback
     const getRecipeImage = (recipe: Recipe): string => {
         return recipe.imagen || recipe.image || 'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
     };
 
-    // Función para navegar al detalle de la receta
     const handleRecipePress = (recipe: Recipe) => {
         router.push({
             pathname: '/recipeDetail',
@@ -122,13 +88,9 @@ export default function HomeScreen() {
         });
     };
 
-    // Función para manejar el toggle de favoritos
     const handleFavoritePress = async (recipe: Recipe, event: any) => {
-        // Evitar que se ejecute el onPress de la receta
         event.stopPropagation();
-        
-        const newFavoriteStatus = await toggleFavorite(recipe._id);
-        
+        await toggleFavorite(recipe._id);
         if (favoritesError) {
             showError(favoritesError);
         }
@@ -140,7 +102,7 @@ export default function HomeScreen() {
                 <Header />
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color="#4C5F00" />
-                    <Text style={styles.loadingText}>Cargando recetas...</Text>
+                    <Text style={styles.loadingText}>Cargando tus recetas...</Text>
                 </View>
                 <BottomTabBar />
             </View>
@@ -150,57 +112,16 @@ export default function HomeScreen() {
     return (
         <View style={styles.container}>
             <Header />
-
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-                {/* Mostrar error si existe */}
-                {error && (
-                    <View style={styles.errorContainer}>
-                        <Ionicons name="warning-outline" size={20} color="#d32f2f" />
-                        <Text style={styles.errorText}>{error}</Text>
-                        <TouchableOpacity onPress={loadRecipes} style={styles.retryButton}>
-                            <Text style={styles.retryText}>Reintentar</Text>
-                        </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Barra de búsqueda */}
-                <View style={styles.searchContainer}>
-                    <View style={styles.searchBar}>
-                        <Ionicons name="search" size={20} color="#666" style={styles.searchIcon} />
-                        <TextInput
-                            placeholder="Buscar recetas, autor, ingrediente..."
-                            style={styles.searchInput}
-                            value={searchText}
-                            onChangeText={setSearchText}
-                            onSubmitEditing={handleSearch}
-                            returnKeyType="search"
-                        />
-                        {searchText.length > 0 && (
-                            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
-                                <Ionicons name="close-circle" size={20} color="#666" />
-                            </TouchableOpacity>
-                        )}
-                    </View>
-                    <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-                        <Ionicons name="search" size={16} color="white" />
-                        <Text style={styles.searchButtonText}>Buscar</Text>
-                    </TouchableOpacity>
-                </View>
-
-                {/* Título de sección */}
                 <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>
-                        {searchText ? `Resultados para "${searchText}"` : 'Recetas Aprobadas'}
-                    </Text>
+                    <Text style={styles.sectionTitle}>Mis Recetas</Text>
                     <Text style={styles.resultCount}>
-                        {filteredRecipes.length} {filteredRecipes.length === 1 ? 'receta' : 'recetas'}
+                        {myRecipes.length} {myRecipes.length === 1 ? 'receta' : 'recetas'}
                     </Text>
                 </View>
-
-                {/* Lista de recetas */}
-                {filteredRecipes.length > 0 ? (
+                {myRecipes.length > 0 ? (
                     <View style={styles.recipesContainer}>
-                        {filteredRecipes.map((recipe) => (
+                        {myRecipes.map((recipe) => (
                             <TouchableOpacity 
                                 key={recipe._id} 
                                 style={styles.recipeCard} 
@@ -211,7 +132,6 @@ export default function HomeScreen() {
                                     style={styles.recipeBackground}
                                     imageStyle={styles.recipeBackgroundImage}
                                 >
-                                    {/* Botón de favoritos */}
                                     <TouchableOpacity 
                                         style={styles.favoriteButton}
                                         onPress={(event) => handleFavoritePress(recipe, event)}
@@ -222,8 +142,6 @@ export default function HomeScreen() {
                                             color={isFavorite(recipe._id) ? "#FF6B6B" : "white"} 
                                         />
                                     </TouchableOpacity>
-
-                                    {/* Footer con nombre de la receta y autor */}
                                     <View style={styles.recipeFooter}>
                                         <View style={styles.recipeInfo}>
                                             <Text style={styles.recipeTitle}>{getRecipeTitle(recipe)}</Text>
@@ -242,23 +160,15 @@ export default function HomeScreen() {
                     </View>
                 ) : (
                     <View style={styles.noResultsContainer}>
-                        <Ionicons name="search" size={48} color="#ccc" />
-                        <Text style={styles.noResultsTitle}>No se encontraron recetas</Text>
+                        <Ionicons name="book-outline" size={48} color="#ccc" />
+                        <Text style={styles.noResultsTitle}>No tienes recetas aún</Text>
                         <Text style={styles.noResultsText}>
-                            {searchText ? 'Intenta con otros términos de búsqueda' : 'No hay recetas disponibles'}
+                            ¡Crea tu primera receta y compártela con la comunidad!
                         </Text>
-                        {searchText && (
-                            <TouchableOpacity style={styles.clearSearchButton} onPress={clearSearch}>
-                                <Text style={styles.clearSearchText}>Ver todas las recetas</Text>
-                            </TouchableOpacity>
-                        )}
                     </View>
                 )}
             </ScrollView>
-
             <BottomTabBar />
-            
-            {/* Modal de Alertas */}
             <AlertModal
                 alertState={alertState}
                 onConfirm={handleConfirm}
@@ -288,71 +198,6 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#4C5F00',
         fontWeight: '500',
-    },
-    errorContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#ffebee',
-        padding: 12,
-        borderRadius: 8,
-        marginBottom: 15,
-        gap: 8,
-    },
-    errorText: {
-        flex: 1,
-        color: '#d32f2f',
-        fontSize: 14,
-    },
-    retryButton: {
-        backgroundColor: '#d32f2f',
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        borderRadius: 4,
-    },
-    retryText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: 'bold',
-    },
-    searchContainer: {
-        flexDirection: 'row',
-        marginBottom: 20,
-        gap: 10,
-    },
-    searchBar: {
-        flex: 1,
-        flexDirection: 'row',
-        backgroundColor: '#F0F0E0',
-        borderRadius: 25,
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingVertical: 5,
-    },
-    searchIcon: {
-        marginRight: 10,
-    },
-    searchInput: {
-        flex: 1,
-        paddingVertical: 10,
-        fontSize: 16,
-        color: '#333',
-    },
-    clearButton: {
-        marginLeft: 5,
-    },
-    searchButton: {
-        backgroundColor: '#4C5F00',
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        borderRadius: 25,
-        gap: 5,
-    },
-    searchButtonText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 14,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -448,23 +293,4 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         marginBottom: 20,
     },
-    clearSearchButton: {
-        backgroundColor: '#4C5F00',
-        paddingHorizontal: 20,
-        paddingVertical: 10,
-        borderRadius: 20,
-    },
-    clearSearchText: {
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    favoriteButton: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        borderRadius: 20,
-        padding: 8,
-        zIndex: 1,
-    },
-});
+}); 
