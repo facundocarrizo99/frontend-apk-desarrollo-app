@@ -17,7 +17,7 @@ export default function RootLayout() {
         <Stack.Screen name="aprobarRecetas" />
         <Stack.Screen name="aprobarComentarios" />
         <Stack.Screen name="crearReceta" />
-        <Stack.Screen name="buscarRecetas" />
+        <Stack.Screen name="buscarReceta" />
         <Stack.Screen name="recipeDetail" />
       </Stack>
     // </AuthGuard> // Comentado temporalmente
