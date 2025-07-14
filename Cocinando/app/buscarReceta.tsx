@@ -42,6 +42,8 @@ export default function BuscarRecetasScreen() {
     const [searchResults, setSearchResults] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    // Estado para ordenamiento
+    const [sortOption, setSortOption] = useState<'name' | 'date'>('name');
 
     // Estados para filtros
     const [filters, setFilters] = useState<SearchFilters>({
@@ -233,6 +235,17 @@ export default function BuscarRecetasScreen() {
         return filters.includeIngredients.length + filters.excludeIngredients.length + filters.tags.length;
     };
 
+    // Ordenar resultados antes de renderizar
+    const getSortedResults = () => {
+        const resultsCopy = [...searchResults];
+        if (sortOption === 'name') {
+            resultsCopy.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+        } else if (sortOption === 'date') {
+            resultsCopy.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+        }
+        return resultsCopy;
+    };
+
     return (
         <View style={styles.container}>
             <Header />
@@ -332,13 +345,29 @@ export default function BuscarRecetasScreen() {
                 {/* Resultados */}
                 {hasSearched && (
                     <View style={styles.resultsContainer}>
+                        {/* Selector de ordenamiento */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 }}>
+                            <Text style={{ fontWeight: '600', color: '#4C5F00' }}>Ordenar por:</Text>
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortOption === 'name' && styles.sortButtonActive]}
+                                onPress={() => setSortOption('name')}
+                            >
+                                <Text style={[styles.sortButtonText, sortOption === 'name' && styles.sortButtonTextActive]}>Nombre</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortOption === 'date' && styles.sortButtonActive]}
+                                onPress={() => setSortOption('date')}
+                            >
+                                <Text style={[styles.sortButtonText, sortOption === 'date' && styles.sortButtonTextActive]}>Fecha</Text>
+                            </TouchableOpacity>
+                        </View>
                         <Text style={styles.resultsTitle}>
                             {loading ? 'Buscando...' : `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''} encontrado${searchResults.length !== 1 ? 's' : ''}`}
                         </Text>
 
-                        {searchResults.length > 0 ? (
+                        {getSortedResults().length > 0 ? (
                             <View style={styles.recipesContainer}>
-                                {searchResults.map((recipe) => (
+                                {getSortedResults().map((recipe) => (
                                     <TouchableOpacity 
                                         key={recipe._id} 
                                         style={styles.recipeCard}
@@ -1020,5 +1049,22 @@ const styles = StyleSheet.create({
     suggestionText: {
         fontSize: 14,
         color: '#333',
+    },
+    sortButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        backgroundColor: '#E8F5E8',
+    },
+    sortButtonActive: {
+        backgroundColor: '#4C5F00',
+    },
+    sortButtonText: {
+        color: '#4C5F00',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    sortButtonTextActive: {
+        color: '#fff',
     },
 }); 
