@@ -11,6 +11,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
@@ -26,19 +28,50 @@ export default function MisRecetasScreen() {
     const [myRecipes, setMyRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const [isOffline, setIsOffline] = useState(false);
+    const [offlineMyRecipes, setOfflineMyRecipes] = useState<Recipe[]>([]);
 
     // Favoritos (opcional, igual que en homeScreen)
     const { toggleFavorite, isFavorite, error: favoritesError } = useFavorites();
     const { alertState, showError, hideAlert, handleConfirm, handleCancel } = useAlert();
 
     useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOffline(!(state.isConnected && state.isInternetReachable));
+        });
         loadMyRecipes();
+        return () => unsubscribe();
     }, []);
+
+    // Guardar los primeros 10 de mis recetas para uso offline
+    useEffect(() => {
+        if (myRecipes.length > 0 && !isOffline) {
+            AsyncStorage.setItem('offlineMyRecipes', JSON.stringify(myRecipes.slice(0, 10)));
+        }
+    }, [myRecipes, isOffline]);
+
+    // Cargar mis recetas offline si no hay conexión
+    useEffect(() => {
+        if (isOffline) {
+            AsyncStorage.getItem('offlineMyRecipes').then(stored => {
+                setOfflineMyRecipes(stored ? JSON.parse(stored) : []);
+            });
+        }
+    }, [isOffline]);
 
     const loadMyRecipes = async () => {
         setLoading(true);
         setError('');
         try {
+            const netState = await NetInfo.fetch();
+            if (!(netState.isConnected && netState.isInternetReachable)) {
+                // Sin conexión: cargar recetas guardadas
+                const stored = await AsyncStorage.getItem('offlineMyRecipes');
+                const offline = stored ? JSON.parse(stored) : [];
+                setMyRecipes(offline);
+                setLoading(false);
+                return;
+            }
             const result = await RecipesService.getUserRecipes(UserManager.getCurrentUser()?._id || '');
             if (result.success && result.recipes) {
                 setMyRecipes(result.recipes);
@@ -96,6 +129,8 @@ export default function MisRecetasScreen() {
         }
     };
 
+    const recipesToShow = isOffline ? offlineMyRecipes : myRecipes;
+
     if (loading) {
         return (
             <View style={styles.container}>
@@ -116,12 +151,12 @@ export default function MisRecetasScreen() {
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Mis Recetas</Text>
                     <Text style={styles.resultCount}>
-                        {myRecipes.length} {myRecipes.length === 1 ? 'receta' : 'recetas'}
+                        {recipesToShow.length} {recipesToShow.length === 1 ? 'receta' : 'recetas'}
                     </Text>
                 </View>
-                {myRecipes.length > 0 ? (
+                {recipesToShow.length > 0 ? (
                     <View style={styles.recipesContainer}>
-                        {myRecipes.map((recipe) => (
+                        {recipesToShow.map((recipe) => (
                             <TouchableOpacity 
                                 key={recipe._id} 
                                 style={styles.recipeCard} 
@@ -132,8 +167,7 @@ export default function MisRecetasScreen() {
                                     style={styles.recipeBackground}
                                     imageStyle={styles.recipeBackgroundImage}
                                 >
-                                    <TouchableOpacity 
-                                        style={styles.favoriteButton}
+                                    <TouchableOpacity
                                         onPress={(event) => handleFavoritePress(recipe, event)}
                                     >
                                         <Ionicons 

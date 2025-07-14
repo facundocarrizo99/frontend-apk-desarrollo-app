@@ -9,7 +9,8 @@ import { Recipe } from '../types/Recipie';
 import { useAlert } from '../utils/useAlert';
 import { useAuthGuard } from '../utils/useAuthGuard';
 import { useFavorites } from '../utils/useFavorites';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 
 
 export default function FavoritosScreen() {
@@ -21,6 +22,33 @@ export default function FavoritosScreen() {
     
     // Hook para alertas
     const { alertState, showError, hideAlert, handleConfirm, handleCancel } = useAlert();
+
+    const [isOffline, setIsOffline] = React.useState(false);
+    const [offlineFavorites, setOfflineFavorites] = React.useState<Recipe[]>([]);
+
+    // Detectar conexión
+    React.useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOffline(!(state.isConnected && state.isInternetReachable));
+        });
+        return () => unsubscribe();
+    }, []);
+
+    // Guardar los primeros 10 favoritos para uso offline
+    React.useEffect(() => {
+        if (favorites.length > 0 && !isOffline) {
+            AsyncStorage.setItem('offlineFavorites', JSON.stringify(favorites.slice(0, 10)));
+        }
+    }, [favorites, isOffline]);
+
+    // Cargar favoritos offline si no hay conexión
+    React.useEffect(() => {
+        if (isOffline) {
+            AsyncStorage.getItem('offlineFavorites').then(stored => {
+                setOfflineFavorites(stored ? JSON.parse(stored) : []);
+            });
+        }
+    }, [isOffline]);
 
     // Funciones helper para compatibilidad de datos
     const getRecipeTitle = (recipe: Recipe): string => {
@@ -72,6 +100,10 @@ export default function FavoritosScreen() {
         }
     };
     
+    const recipesToShow = isOffline ? offlineFavorites : favorites;
+    const isLoading = loading && !isOffline;
+    const isError = error && !isOffline;
+
     return (
         <View style={styles.container}>
             <Header />
@@ -84,17 +116,17 @@ export default function FavoritosScreen() {
                 </View>
 
                 {/* Estados de carga, error y contenido */}
-                {loading ? (
+                {isLoading ? (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color="#4C5F00" />
                         <Text style={styles.loadingText}>Cargando favoritos...</Text>
                     </View>
-                ) : error ? (
+                ) : isError ? (
                     <View style={styles.errorContainer}>
                         <Ionicons name="alert-circle-outline" size={48} color="#d32f2f" />
                         <Text style={styles.errorText}>{error}</Text>
                     </View>
-                ) : favorites.length === 0 ? (
+                ) : recipesToShow.length === 0 ? (
                     <View style={styles.emptyContainer}>
                         <Ionicons name="heart-outline" size={64} color="#ccc" />
                         <Text style={styles.emptyTitle}>No tienes favoritos aún</Text>
@@ -104,7 +136,7 @@ export default function FavoritosScreen() {
                     </View>
                 ) : (
                     <View style={styles.recipesContainer}>
-                        {favorites.map((recipe) => (
+                        {recipesToShow.map((recipe) => (
                             <TouchableOpacity 
                                 key={recipe._id} 
                                 style={styles.recipeCard}

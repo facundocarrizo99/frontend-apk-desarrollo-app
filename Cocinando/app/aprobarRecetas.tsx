@@ -6,6 +6,7 @@ import Header from '../components/Header';
 import { Recipe } from '../types/Recipie';
 import { PendingRecipesService } from '../utils/pendingRecipesServices';
 import { useAuthGuard } from '../utils/useAuthGuard';
+import { router } from 'expo-router';
 
 
 export default function AprobarRecetasScreen() {
@@ -21,6 +22,8 @@ export default function AprobarRecetasScreen() {
    const [selectedRecipe, setSelectedRecipe] = useState<{id: string, title: string} | null>(null);
    const [successMessage, setSuccessMessage] = useState('');
    const [actionLoading, setActionLoading] = useState(false);
+   const [selectedRecipeForModal, setSelectedRecipeForModal] = useState<Recipe | null>(null);
+   const [modalVisible, setModalVisible] = useState(false);
 
 
    // Cargar recetas pendientes al montar el componente
@@ -153,6 +156,67 @@ export default function AprobarRecetasScreen() {
    };
 
 
+   // Función para navegar al detalle de la receta
+   const handleRecipePress = (recipe: Recipe) => {
+       setSelectedRecipeForModal(recipe);
+       setModalVisible(true);
+   };
+
+   // Función para aprobar desde el modal
+   const handleApproveFromModal = async () => {
+       if (!selectedRecipeForModal) return;
+       setActionLoading(true);
+       try {
+           const result = await PendingRecipesService.approveRecipe(selectedRecipeForModal._id);
+           if (result.success) {
+               setRecetas(prev => prev.filter(r => r._id !== selectedRecipeForModal._id));
+               setSuccessMessage(`La receta "${getRecipeTitle(selectedRecipeForModal)}" ha sido aprobada.`);
+               setSuccessVisible(true);
+               setModalVisible(false);
+           } else {
+               setError(result.error || 'Error al aprobar la receta');
+               setModalVisible(false);
+           }
+       } catch (err) {
+           setError('Error de conexión al aprobar la receta');
+           setModalVisible(false);
+       } finally {
+           setActionLoading(false);
+           setSelectedRecipeForModal(null);
+       }
+   };
+
+   // Función para rechazar desde el modal
+   const handleRejectFromModal = async () => {
+       if (!selectedRecipeForModal) return;
+       setActionLoading(true);
+       try {
+           const result = await PendingRecipesService.rejectRecipe(selectedRecipeForModal._id);
+           if (result.success) {
+               setRecetas(prev => prev.filter(r => r._id !== selectedRecipeForModal._id));
+               setSuccessMessage(`La receta "${getRecipeTitle(selectedRecipeForModal)}" ha sido rechazada.`);
+               setSuccessVisible(true);
+               setModalVisible(false);
+           } else {
+               setError(result.error || 'Error al rechazar la receta');
+               setModalVisible(false);
+           }
+       } catch (err) {
+           setError('Error de conexión al rechazar la receta');
+           setModalVisible(false);
+       } finally {
+           setActionLoading(false);
+           setSelectedRecipeForModal(null);
+       }
+   };
+
+   // Función para cerrar el modal
+   const handleCloseModal = () => {
+       setModalVisible(false);
+       setSelectedRecipeForModal(null);
+   };
+
+
    if (loading) {
        return (
            <View style={styles.container}>
@@ -200,7 +264,7 @@ export default function AprobarRecetasScreen() {
                ) : (
                    <View style={styles.recipesContainer}>
                        {recetas.map((recipe) => (
-                           <TouchableOpacity key={recipe._id} style={styles.recipeCard}>
+                           <TouchableOpacity key={recipe._id} style={styles.recipeCard} onPress={() => handleRecipePress(recipe)}>
                                <ImageBackground
                                    source={{ uri: getRecipeImage(recipe) }}
                                    style={styles.recipeBackground}
@@ -315,6 +379,127 @@ export default function AprobarRecetasScreen() {
                        >
                            <Text style={styles.modalButtonText}>Entendido</Text>
                        </TouchableOpacity>
+                   </View>
+               </View>
+           </Modal>
+
+           {/* Modal de detalle de receta para aprobar/rechazar */}
+           <Modal
+               transparent
+               visible={modalVisible}
+               animationType="slide"
+               onRequestClose={handleCloseModal}
+           >
+               <View style={styles.modalBackground}>
+                   <View style={[styles.modalBox, { width: '95%', maxHeight: '90%' }]}> 
+                       <Text style={[styles.modalTitle, { alignSelf: 'center', width: '100%' }]}>Detalle de la Receta</Text>
+                       {selectedRecipeForModal && (
+                           <ScrollView style={{ width: '100%' }} showsVerticalScrollIndicator={false}>
+                               {/* Imagen principal */}
+                               <ImageBackground
+                                   source={{ uri: getRecipeImage(selectedRecipeForModal) }}
+                                   style={{ width: '100%', height: 180, borderRadius: 12, marginBottom: 12, overflow: 'hidden' }}
+                                   imageStyle={{ borderRadius: 12 }}
+                               />
+                               {/* Título */}
+                               <Text style={{ fontWeight: 'bold', fontSize: 20, marginBottom: 8 }}>{getRecipeTitle(selectedRecipeForModal)}</Text>
+                               {/* Autor y fecha */}
+                               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                                   <Image source={{ uri: getAuthorAvatar(selectedRecipeForModal) }} style={{ width: 28, height: 28, borderRadius: 14, marginRight: 8 }} />
+                                   <Text style={{ fontSize: 14, color: '#333', fontWeight: '600' }}>{getAuthorName(selectedRecipeForModal)}</Text>
+                                   <Text style={{ fontSize: 12, color: '#888', marginLeft: 10 }}>
+                                       {formatDate(selectedRecipeForModal.fechaCreacion || selectedRecipeForModal.createdAt || '')}
+                                   </Text>
+                               </View>
+                               {/* Estadísticas */}
+                               <View style={{ flexDirection: 'row', gap: 12, marginBottom: 8 }}>
+                                   {selectedRecipeForModal.cantidadComensales && (
+                                       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                                           <Ionicons name="people" size={16} color="#4C5F00" />
+                                           <Text style={{ marginLeft: 4, fontSize: 13, color: '#666' }}>{selectedRecipeForModal.cantidadComensales} comensales</Text>
+                                       </View>
+                                   )}
+                                   {selectedRecipeForModal.valoracionPromedio && selectedRecipeForModal.valoracionPromedio > 0 && (
+                                       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8f9fa', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                                           <Ionicons name="star" size={16} color="#FFD700" />
+                                           <Text style={{ marginLeft: 4, fontSize: 13, color: '#666' }}>{selectedRecipeForModal.valoracionPromedio.toFixed(1)}</Text>
+                                       </View>
+                                   )}
+                               </View>
+                               {/* Descripción */}
+                               {selectedRecipeForModal.descripcion && (
+                                   <View style={{ marginBottom: 12 }}>
+                                       <Text style={{ fontWeight: 'bold', color: '#4C5F00', marginBottom: 2 }}>Descripción</Text>
+                                       <Text style={{ color: '#555', fontSize: 15 }}>{selectedRecipeForModal.descripcion}</Text>
+                                   </View>
+                               )}
+                               {/* Tags */}
+                               {selectedRecipeForModal.tags && selectedRecipeForModal.tags.length > 0 && (
+                                   <View style={{ marginBottom: 12 }}>
+                                       <Text style={{ fontWeight: 'bold', color: '#4C5F00', marginBottom: 2 }}>Etiquetas</Text>
+                                       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                           {selectedRecipeForModal.tags.map((tag, idx) => (
+                                               <View key={idx} style={{ backgroundColor: '#E8F5E8', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginRight: 6, marginBottom: 6 }}>
+                                                   <Text style={{ color: '#4C5F00', fontSize: 13 }}>{tag}</Text>
+                                               </View>
+                                           ))}
+                                       </View>
+                                   </View>
+                               )}
+                               {/* Ingredientes */}
+                               {selectedRecipeForModal.ingredientes && selectedRecipeForModal.ingredientes.length > 0 && (
+                                   <View style={{ marginBottom: 12 }}>
+                                       <Text style={{ fontWeight: 'bold', color: '#4C5F00', marginBottom: 2 }}>Ingredientes</Text>
+                                       {selectedRecipeForModal.ingredientes.map((ingredient, idx) => (
+                                           <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                                               <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#4C5F00', marginTop: 8, marginRight: 10 }} />
+                                               <Text style={{ color: '#555', fontSize: 15 }}>
+                                                   {ingredient.cantidad} {ingredient.unidadMedida} de {ingredient.ingrediente}
+                                               </Text>
+                                           </View>
+                                       ))}
+                                   </View>
+                               )}
+                               {/* Pasos */}
+                               {selectedRecipeForModal.pasos && selectedRecipeForModal.pasos.length > 0 && (
+                                   <View style={{ marginBottom: 12 }}>
+                                       <Text style={{ fontWeight: 'bold', color: '#4C5F00', marginBottom: 2 }}>Preparación</Text>
+                                       {selectedRecipeForModal.pasos.map((step, idx) => (
+                                           <View key={idx} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 6 }}>
+                                               <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: '#4C5F00', justifyContent: 'center', alignItems: 'center', marginRight: 10, marginTop: 2 }}>
+                                                   <Text style={{ color: 'white', fontSize: 13, fontWeight: 'bold' }}>{idx + 1}</Text>
+                                               </View>
+                                               <Text style={{ color: '#555', fontSize: 15, flex: 1 }}>{step}</Text>
+                                           </View>
+                                       ))}
+                                   </View>
+                               )}
+                               <View style={{ height: 10 }} />
+                           </ScrollView>
+                       )}
+                       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', width: '100%', gap: 10, marginTop: 10 }}>
+                           <TouchableOpacity
+                               style={[styles.modalButton, styles.approveModalButton]}
+                               onPress={handleApproveFromModal}
+                               disabled={actionLoading}
+                           >
+                               <Text style={styles.modalButtonText}>Aprobar</Text>
+                           </TouchableOpacity>
+                           <TouchableOpacity
+                               style={[styles.modalButton, styles.rejectModalButton]}
+                               onPress={handleRejectFromModal}
+                               disabled={actionLoading}
+                           >
+                               <Text style={styles.modalButtonText}>Rechazar</Text>
+                           </TouchableOpacity>
+                           <TouchableOpacity
+                               style={[styles.modalButton, styles.cancelButton]}
+                               onPress={handleCloseModal}
+                               disabled={actionLoading}
+                           >
+                               <Text style={[styles.modalButtonText, styles.cancelButtonText]}>Cerrar</Text>
+                           </TouchableOpacity>
+                       </View>
                    </View>
                </View>
            </Modal>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     FlatList,
     Modal,
@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
@@ -18,6 +19,7 @@ import { CreateRecipeRequest, Ingredient } from '../types/Recipie';
 import { RecipesService } from '../utils/recipesService';
 import { useAlert } from '../utils/useAlert';
 import { useAuthGuard } from '../utils/useAuthGuard';
+import { useNetworkInfo } from '../utils/useNetworkInfo';
 
 const UNIDADES_MEDIDA = [
     'g', 'kg', 'ml', 'l', 'cdta', 'cda', 'taza', 'unidad', 'pizca'
@@ -41,6 +43,7 @@ const DIFICULTADES = [
 
 export default function CrearRecetaScreen() {
     useAuthGuard();
+    const { isConnected, isMetered } = useNetworkInfo();
 
     // Estados del formulario
     const [titulo, setTitulo] = useState('');
@@ -74,6 +77,48 @@ export default function CrearRecetaScreen() {
     
     // Hook para alertas
     const { alertState, showError, showSuccess, hideAlert, handleConfirm, handleCancel } = useAlert();
+
+    // Sincronizar recetas locales cuando la conexión es libre
+    useEffect(() => {
+        if (isConnected && !isMetered) {
+            syncLocalRecipes();
+        }
+    }, [isConnected, isMetered]);
+
+    // Guardar receta localmente
+    const saveRecipeLocally = async (recipeData: CreateRecipeRequest) => {
+        try {
+            const stored = await AsyncStorage.getItem('pendingRecipes');
+            const pending = stored ? JSON.parse(stored) : [];
+            pending.push(recipeData);
+            await AsyncStorage.setItem('pendingRecipes', JSON.stringify(pending));
+        } catch (e) {
+            showError('No se pudo guardar la receta localmente');
+        }
+    };
+
+    // Sincronizar recetas locales
+    const syncLocalRecipes = async () => {
+        try {
+            const stored = await AsyncStorage.getItem('pendingRecipes');
+            const pending: CreateRecipeRequest[] = stored ? JSON.parse(stored) : [];
+            if (pending.length === 0) return;
+            let allUploaded = true;
+            for (const recipe of pending) {
+                const response = await RecipesService.createRecipe(recipe);
+                if (!response.success) {
+                    allUploaded = false;
+                    break;
+                }
+            }
+            if (allUploaded) {
+                await AsyncStorage.removeItem('pendingRecipes');
+                showSuccess('Recetas pendientes sincronizadas exitosamente');
+            }
+        } catch (e) {
+            // No mostrar error, se reintentará luego
+        }
+    };
 
     // Funciones para tags
     const toggleTag = (tag: string) => {
@@ -212,15 +257,23 @@ export default function CrearRecetaScreen() {
                 imagen: imagen.trim() || undefined
             };
 
-            const response = await RecipesService.createRecipe(recipeData);
-
-            if (response.success) {
+            if (!isConnected || isMetered) {
+                await saveRecipeLocally(recipeData);
                 showSuccess(
-                    'Tu receta ha sido enviada y será revisada por un administrador antes de ser publicada.',
+                    'Estás sin conexión o en una red medida. Tu receta se guardó localmente y se enviará cuando tengas una conexión libre.',
                     () => router.push('/homeScreen')
                 );
             } else {
-                showError(response.error || 'Error al crear la receta');
+                const response = await RecipesService.createRecipe(recipeData);
+
+                if (response.success) {
+                    showSuccess(
+                        'Tu receta ha sido enviada y será revisada por un administrador antes de ser publicada.',
+                        () => router.push('/homeScreen')
+                    );
+                } else {
+                    showError(response.error || 'Error al crear la receta');
+                }
             }
         } catch (error) {
             showError('Error de conexión');

@@ -12,6 +12,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
@@ -30,6 +32,7 @@ export default function HomeScreen() {
     const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
+    const [isOffline, setIsOffline] = useState(false);
     
     // Hook para manejar favoritos
     const { toggleFavorite, isFavorite, error: favoritesError } = useFavorites();
@@ -37,35 +40,75 @@ export default function HomeScreen() {
     // Hook para alertas
     const { alertState, showError, hideAlert, handleConfirm, handleCancel } = useAlert();
 
+    // Helper para deduplicar recetas por _id
+    const deduplicateRecipes = (recipes: Recipe[]): Recipe[] => {
+        const seen = new Set();
+        return recipes.filter(recipe => {
+            if (seen.has(recipe._id)) return false;
+            seen.add(recipe._id);
+            return true;
+        });
+    };
+
     // Cargar recetas al montar el componente
     useEffect(() => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            setIsOffline(!(state.isConnected && state.isInternetReachable));
+        });
         loadRecipes();
+        return () => unsubscribe();
     }, []);
+
+    // Guardar las primeras 3 recetas para uso offline
+    useEffect(() => {
+        if (allRecipes.length > 0 && !isOffline) {
+            AsyncStorage.setItem('offlineRecipes', JSON.stringify(allRecipes.slice(0, 3)));
+        }
+    }, [allRecipes, isOffline]);
+
+    // Cargar y combinar recetas offline (recetas, favoritos, misRecetas)
+    useEffect(() => {
+        if (isOffline) {
+            (async () => {
+                const [r, f, m] = await Promise.all([
+                    AsyncStorage.getItem('offlineRecipes'),
+                    AsyncStorage.getItem('offlineFavorites'),
+                    AsyncStorage.getItem('offlineMyRecipes'),
+                ]);
+                const recipes = r ? JSON.parse(r) : [];
+                const favorites = f ? JSON.parse(f) : [];
+                const myRecipes = m ? JSON.parse(m) : [];
+                // Only show approved recipes
+                const merged = deduplicateRecipes([...recipes, ...favorites, ...myRecipes]).filter(r => r.aprobado === true);
+                setAllRecipes(merged);
+                setFilteredRecipes(merged);
+            })();
+        }
+    }, [isOffline]);
 
     const loadRecipes = async () => {
         setLoading(true);
         setError('');
-        
         try {
+            const netState = await NetInfo.fetch();
+            if (!(netState.isConnected && netState.isInternetReachable)) {
+                // Sin conexión: cargar recetas guardadas (ahora hecho en useEffect arriba)
+                setLoading(false);
+                return;
+            }
             const result = await RecipesService.getApprovedRecipes();
-            
             if (result.success && result.recipes) {
                 setAllRecipes(result.recipes);
                 setFilteredRecipes(result.recipes);
             } else {
                 setError(result.error || 'Error al cargar recetas');
-                // Usar recetas de fallback en caso de error
-                const fallbackRecipes = RecipesService.getFallbackRecipes();
-                setAllRecipes(fallbackRecipes);
-                setFilteredRecipes(fallbackRecipes);
+                setAllRecipes([]);
+                setFilteredRecipes([]);
             }
         } catch (err) {
-            console.error('Error al cargar recetas:', err);
             setError('Error de conexión');
-            // Usar recetas de fallback en caso de error
-            const fallbackRecipes = RecipesService.getFallbackRecipes();
-            setAllRecipes(fallbackRecipes);
-            setFilteredRecipes(fallbackRecipes);
+            setAllRecipes([]);
+            setFilteredRecipes([]);
         } finally {
             setLoading(false);
         }
