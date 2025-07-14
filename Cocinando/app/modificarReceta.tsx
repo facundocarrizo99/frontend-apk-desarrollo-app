@@ -221,7 +221,7 @@ export default function ModificarRecetaScreen() {
                 ingredientes: ingredientes,
                 pasos: pasos.filter(p => p.trim()),
                 tags: tags as ('Vegetariano' | 'Vegano' | 'SinGluten' | 'Dulce' | 'Salado' | 'Rapido' | 'Internacional' | 'Tradicional' | 'Saludable' | 'Economico')[],
-                imagen: imagen.trim() || undefined
+                imagen: imagen.trim() || undefined,
             };
 
             // You may need to implement updateRecipe in RecipesService

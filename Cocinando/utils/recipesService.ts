@@ -299,9 +299,9 @@ export const RecipesService = {
                 };
             }
             devLog('Actualizando receta', { id, recipeData });
-            const url = `${APP_CONFIG.API_BASE_URL}/recipes/${id}`; //`${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.RECIPE_UPDATE}`
+            const url = `${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.RECIPE_UPDATE.replace(':id', id)}`;
             const response = await fetch(url, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json',
