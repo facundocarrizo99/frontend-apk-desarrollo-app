@@ -17,6 +17,9 @@ export const APP_CONFIG = {
        REGISTER: '/user/auth/register',
        RECOVER_PASSWORD: '/user/auth/recover-password',
        VERIFY_CODE: '/user/auth/verify-code',
+       FORGOT_PASSWORD: '/user/auth/forgot-password',
+       VERIFY_RESET_CODE: '/user/auth/verify-reset-code',
+       RESET_PASSWORD: '/user/auth/reset-password',
        CHANGE_PASSWORD: '/user/auth/change-password',
        UPDATE_PROFILE: '/user/users/update-me', // Actualizar perfil del usuario
        RECIPES_APPROVED: '/recipes/approved', // Recetas aprobadas
