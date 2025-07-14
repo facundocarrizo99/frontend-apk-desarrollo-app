@@ -173,6 +173,33 @@ export default function RecipeDetail() {
                             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                                 <Ionicons name="arrow-back" size={24} color="white" />
                             </TouchableOpacity>
+                            <TouchableOpacity
+                                style={styles.editButton}
+                                onPress={() => {
+                                    router.push({
+                                        pathname: '/modificarReceta',
+                                        params: {
+                                            id: recipe._id,
+                                            titulo: recipe.titulo,
+                                            descripcion: recipe.descripcion,
+                                            imagen: recipe.imagen,
+                                            autor: JSON.stringify(recipe.autor),
+                                            ingredientes: JSON.stringify(recipe.ingredientes),
+                                            pasos: JSON.stringify(recipe.pasos),
+                                            cantidadComensales: recipe.cantidadComensales?.toString() || '1',
+                                            tags: JSON.stringify(recipe.tags),
+                                            valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
+                                            fechaCreacion: recipe.fechaCreacion || '',
+                                            fechaModificacion: recipe.fechaModificacion || '',
+                                            dificultad: (recipe as any).dificultad || '',
+                                            categoria: (recipe as any).categoria || '',
+                                            cocina: (recipe as any).cocina || '',
+                                        },
+                                    });
+                                }}
+                            >
+                                <Ionicons name="pencil" size={24} color="white" />
+                            </TouchableOpacity>
                         </View>
                     </ImageBackground>
                 </View>
@@ -409,6 +436,18 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'center',
         alignItems: 'center',
+    },
+    editButton: {
+        position: 'absolute',
+        top: 20,
+        right: 16,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 2,
     },
     mainInfo: {
         backgroundColor: 'white',

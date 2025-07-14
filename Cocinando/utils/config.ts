@@ -25,6 +25,7 @@ export const APP_CONFIG = {
        RECIPE_DELETE: '/recipes/:id', // Eliminar receta (reemplazar :id)
        RECIPES_USER: '/recipes/user/:usuarioId', // Recetas de un usuario específico
        RECIPE_CREATE: '/recipes', // Crear nueva receta
+       RECIPE_UPDATE: '/recipes/:id', // Actualizar receta (reemplazar :id)
        FAVORITES_GET: '/user/users/me/favorites', // Obtener favoritos del usuario
        FAVORITES_ADD: '/user/users/me/favorites/:recipeId', // Agregar a favoritos
        FAVORITES_REMOVE: '/user/users/me/favorites/:recipeId', // Remover de favoritos

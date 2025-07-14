@@ -287,6 +287,48 @@ export const RecipesService = {
         }
     },
 
+    // Actualizar receta existente
+    updateRecipe: async (id: string, recipeData: CreateRecipeRequest): Promise<{ success: boolean; error?: string }> => {
+        try {
+            const token = UserManager.getAuthToken();
+            if (!token) {
+                devLog('No hay token de autenticación disponible para actualizar receta');
+                return {
+                    success: false,
+                    error: 'No hay token de autenticación'
+                };
+            }
+            devLog('Actualizando receta', { id, recipeData });
+            const url = `${APP_CONFIG.API_BASE_URL}/recipes/${id}`; //`${APP_CONFIG.API_BASE_URL}${APP_CONFIG.ENDPOINTS.RECIPE_UPDATE}`
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(recipeData),
+            });
+            const data = await response.json();
+            devLog('Respuesta de API actualizar receta:', data);
+            if (response.ok && data.status === 'success') {
+                return { success: true };
+            } else {
+                devLog('Error en la respuesta de la API de actualizar receta');
+                return {
+                    success: false,
+                    error: data.message || 'Error al actualizar la receta'
+                };
+            }
+        } catch (error) {
+            console.error('Error al actualizar receta:', error);
+            devLog('Error de conexión al actualizar receta', error);
+            return {
+                success: false,
+                error: 'Error de conexión al actualizar la receta'
+            };
+        }
+    },
+
     // === MÉTODOS DE BÚSQUEDA AVANZADA ===
 
     // Obtener nombres de recetas

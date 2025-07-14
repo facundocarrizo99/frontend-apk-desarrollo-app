@@ -47,7 +47,7 @@ export default function Header() {
        setProfileVisible(false);
        switch (option) {
            case 'mis-recetas':
-               showInfo('Próximamente', 'La sección mis recetas estará disponible pronto.');
+               router.push('/misRecetas' as any);
                break;
            case 'editar-perfil':
                router.push('/editarPerfil');
