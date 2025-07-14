@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     Image,
     ImageBackground,
@@ -15,6 +15,11 @@ import {
 import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
+import RecipeHeader from '../components/RecipeHeader';
+import IngredientsList from '../components/IngredientsList';
+import StepsList from '../components/StepsList';
+import CommentsSection from '../components/CommentsSection';
+import AddCommentModal from '../components/AddCommentModal';
 import { Comment, Recipe } from '../types/Recipie';
 import { CommentsService } from '../utils/commentsService';
 import { useAlert } from '../utils/useAlert';
@@ -54,14 +59,14 @@ export default function RecipeDetail() {
     const baseComensales = typeof recipe.cantidadComensales === 'number' && !isNaN(recipe.cantidadComensales) ? recipe.cantidadComensales : 1;
     const [selectedComensales, setSelectedComensales] = useState(baseComensales);
 
-    // Calcular ingredientes ajustados
-    const getAdjustedIngredients = () => {
+    // Calcular ingredientes ajustados (memoized)
+    const adjustedIngredients = useMemo(() => {
         if (!recipe.ingredientes) return [];
         return recipe.ingredientes.map(ing => ({
             ...ing,
             cantidad: Math.round((ing.cantidad * selectedComensales / baseComensales) * 100) / 100
         }));
-    };
+    }, [recipe.ingredientes, selectedComensales, baseComensales]);
     
     // Hook para alertas
     const { alertState, showError, showSuccess, hideAlert, handleConfirm, handleCancel } = useAlert();
@@ -110,27 +115,7 @@ export default function RecipeDetail() {
         return recipe.autor?.name || 'Autor desconocido';
     };
 
-    // Función para renderizar estrellas
-    const renderStars = (rating: number, interactive: boolean = false) => {
-        const stars = [];
-        for (let i = 1; i <= 5; i++) {
-            stars.push(
-                <TouchableOpacity
-                    key={i}
-                    onPress={() => interactive && setNewRating(i)}
-                    disabled={!interactive}
-                    style={interactive ? styles.interactiveStar : {}}
-                >
-                    <Ionicons
-                        name={i <= rating ? 'star' : 'star-outline'}
-                        size={interactive ? 24 : 16}
-                        color="#FFD700"
-                    />
-                </TouchableOpacity>
-            );
-        }
-        return stars;
-    };
+    // Función para renderizar estrellas (moved to StarRating component)
 
     // Función para enviar comentario
     const handleSubmitComment = async () => {
@@ -173,54 +158,37 @@ export default function RecipeDetail() {
     return (
         <View style={styles.container}>
             <Header />
-            
             <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
                 {/* Imagen principal de la receta */}
-                <View style={styles.imageContainer}>
-                    <ImageBackground 
-                        source={{ uri: recipe.imagen }} 
-                        style={styles.heroImage}
-                        imageStyle={styles.heroImageStyle}
-                    >
-                        <View style={styles.imageOverlay}>
-                            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                                <Ionicons name="arrow-back" size={24} color="white" />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={styles.editButton}
-                                onPress={() => {
-                                    router.push({
-                                        pathname: '/modificarReceta',
-                                        params: {
-                                            id: recipe._id,
-                                            titulo: recipe.titulo,
-                                            descripcion: recipe.descripcion,
-                                            imagen: recipe.imagen,
-                                            autor: JSON.stringify(recipe.autor),
-                                            ingredientes: JSON.stringify(recipe.ingredientes),
-                                            pasos: JSON.stringify(recipe.pasos),
-                                            cantidadComensales: recipe.cantidadComensales?.toString() || '1',
-                                            tags: JSON.stringify(recipe.tags),
-                                            valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
-                                            fechaCreacion: recipe.fechaCreacion || '',
-                                            fechaModificacion: recipe.fechaModificacion || '',
-                                            dificultad: (recipe as any).dificultad || '',
-                                            categoria: (recipe as any).categoria || '',
-                                            cocina: (recipe as any).cocina || '',
-                                        },
-                                    });
-                                }}
-                            >
-                                <Ionicons name="pencil" size={24} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                    </ImageBackground>
-                </View>
-
+                <RecipeHeader
+                    image={recipe.imagen}
+                    onBack={handleBack}
+                    onEdit={() => {
+                        router.push({
+                            pathname: '/modificarReceta',
+                            params: {
+                                id: recipe._id,
+                                titulo: recipe.titulo,
+                                descripcion: recipe.descripcion,
+                                imagen: recipe.imagen,
+                                autor: JSON.stringify(recipe.autor),
+                                ingredientes: JSON.stringify(recipe.ingredientes),
+                                pasos: JSON.stringify(recipe.pasos),
+                                cantidadComensales: recipe.cantidadComensales?.toString() || '1',
+                                tags: JSON.stringify(recipe.tags),
+                                valoracionPromedio: recipe.valoracionPromedio?.toString() || '0',
+                                fechaCreacion: recipe.fechaCreacion || '',
+                                fechaModificacion: recipe.fechaModificacion || '',
+                                dificultad: (recipe as any).dificultad || '',
+                                categoria: (recipe as any).categoria || '',
+                                cocina: (recipe as any).cocina || '',
+                            },
+                        });
+                    }}
+                />
                 {/* Información principal */}
                 <View style={styles.mainInfo}>
                     <Text style={styles.recipeTitle}>{recipe.titulo}</Text>
-                    
                     {/* Información del autor */}
                     <View style={styles.authorSection}>
                         <Image 
@@ -232,7 +200,6 @@ export default function RecipeDetail() {
                             <Text style={styles.authorName}>{getAuthorName()}</Text>
                         </View>
                     </View>
-
                     {/* Estadísticas */}
                     <View style={styles.statsContainer}>
                         {recipe.cantidadComensales && (
@@ -248,7 +215,6 @@ export default function RecipeDetail() {
                             </View>
                         )}
                     </View>
-
                     {/* Descripción */}
                     {recipe.descripcion && (
                         <View style={styles.section}>
@@ -256,7 +222,6 @@ export default function RecipeDetail() {
                             <Text style={styles.description}>{recipe.descripcion}</Text>
                         </View>
                     )}
-
                     {/* Tags */}
                     {recipe.tags && recipe.tags.length > 0 && (
                         <View style={styles.section}>
@@ -270,158 +235,39 @@ export default function RecipeDetail() {
                             </View>
                         </View>
                     )}
-
                     {/* Ingredientes */}
                     {recipe.ingredientes && recipe.ingredientes.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Ingredientes</Text>
-                            {/* Selector de comensales */}
-                            <View style={styles.peopleSelectorContainer}>
-                                <Text style={styles.peopleSelectorLabel}>Cantidad de personas:</Text>
-                                <View style={styles.peopleSelectorStepper}>
-                                    <TouchableOpacity
-                                        style={styles.peopleSelectorButton}
-                                        onPress={() => setSelectedComensales(c => Math.max(1, c - 1))}
-                                    >
-                                        <Ionicons name="remove-circle-outline" size={24} color="#4C5F00" />
-                                    </TouchableOpacity>
-                                    <Text style={styles.peopleSelectorValue}>{selectedComensales}</Text>
-                                    <TouchableOpacity
-                                        style={styles.peopleSelectorButton}
-                                        onPress={() => setSelectedComensales(c => c + 1)}
-                                    >
-                                        <Ionicons name="add-circle-outline" size={24} color="#4C5F00" />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                            {/* Lista de ingredientes ajustados */}
-                            {getAdjustedIngredients().map((ingredient, index) => (
-                                <View key={index} style={styles.ingredientItem}>
-                                    <View style={styles.ingredientBullet} />
-                                    <Text style={styles.ingredientText}>
-                                        {ingredient.cantidad} {ingredient.unidadMedida} de {ingredient.ingrediente}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
+                        <IngredientsList
+                            ingredients={recipe.ingredientes}
+                            selectedComensales={selectedComensales}
+                            setSelectedComensales={setSelectedComensales}
+                            baseComensales={baseComensales}
+                        />
                     )}
-
                     {/* Pasos */}
                     {recipe.pasos && recipe.pasos.length > 0 && (
-                        <View style={styles.section}>
-                            <Text style={styles.sectionTitle}>Preparación</Text>
-                            {recipe.pasos.map((step, index) => (
-                                <View key={index} style={styles.stepItem}>
-                                    <View style={styles.stepNumber}>
-                                        <Text style={styles.stepNumberText}>{index + 1}</Text>
-                                    </View>
-                                    <Text style={styles.stepText}>{step}</Text>
-                                </View>
-                            ))}
-                        </View>
+                        <StepsList steps={recipe.pasos} />
                     )}
-
                     {/* Comentarios */}
-                    <View style={styles.section}>
-                        <View style={styles.commentsHeader}>
-                            <Text style={styles.sectionTitle}>Comentarios</Text>
-                            <TouchableOpacity
-                                style={styles.addCommentButton}
-                                onPress={handleAddComment}
-                            >
-                                <Ionicons name="add" size={20} color="#4C5F00" />
-                                <Text style={styles.addCommentText}>Agregar</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        {loadingComments ? (
-                            <View style={styles.loadingContainer}>
-                                <Text style={styles.loadingText}>Cargando comentarios...</Text>
-                            </View>
-                        ) : comments.length === 0 ? (
-                            <View style={styles.emptyCommentsContainer}>
-                                <Ionicons name="chatbubbles-outline" size={48} color="#ccc" />
-                                <Text style={styles.emptyCommentsText}>No hay comentarios aún</Text>
-                                <Text style={styles.emptyCommentsSubtext}>¡Sé el primero en comentar!</Text>
-                            </View>
-                        ) : (
-                            <View style={styles.commentsContainer}>
-                                {comments.map((comment) => (
-                                    <View key={comment._id} style={styles.commentCard}>
-                                        <View style={styles.commentHeader}>
-                                            <Image
-                                                source={{ uri: comment.usuario.avatar || 'https://randomuser.me/api/portraits/lego/1.jpg' }}
-                                                style={styles.commentAvatar}
-                                            />
-                                            <View style={styles.commentInfo}>
-                                                <Text style={styles.commentAuthor}>{comment.usuario.name}</Text>
-                                                <View style={styles.commentRating}>
-                                                    {renderStars(comment.valoracion)}
-                                                </View>
-                                            </View>
-                                        </View>
-                                        <Text style={styles.commentText}>{comment.texto}</Text>
-                                        <Text style={styles.commentDate}>
-                                            {new Date(comment.fechaCreacion).toLocaleDateString('es-ES')}
-                                        </Text>
-                                    </View>
-                                ))}
-                            </View>
-                        )}
-                    </View>
+                    <CommentsSection
+                        comments={comments}
+                        loading={loadingComments}
+                        onAddComment={handleAddComment}
+                    />
                 </View>
             </ScrollView>
-
             <BottomTabBar />
-
             {/* Modal para agregar comentario */}
-            <Modal
-                transparent
+            <AddCommentModal
                 visible={showAddCommentModal}
-                animationType="slide"
-                onRequestClose={() => setShowAddCommentModal(false)}
-            >
-                <View style={styles.modalBackground}>
-                    <View style={styles.modalContainer}>
-                        <Text style={styles.modalTitle}>Agregar Comentario</Text>
-                        
-                        <Text style={styles.modalLabel}>Calificación:</Text>
-                        <View style={styles.ratingContainer}>
-                            {renderStars(newRating, true)}
-                        </View>
-
-                        <Text style={styles.modalLabel}>Comentario:</Text>
-                        <TextInput
-                            style={styles.commentInput}
-                            placeholder="Escribe tu comentario..."
-                            value={newComment}
-                            onChangeText={setNewComment}
-                            multiline
-                            numberOfLines={4}
-                            textAlignVertical="top"
-                        />
-
-                        <View style={styles.modalButtonContainer}>
-                            <TouchableOpacity
-                                style={styles.modalCancelButton}
-                                onPress={() => setShowAddCommentModal(false)}
-                            >
-                                <Text style={styles.modalCancelText}>Cancelar</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[styles.modalSubmitButton, submittingComment && styles.modalSubmitButtonDisabled]}
-                                onPress={handleSubmitComment}
-                                disabled={submittingComment}
-                            >
-                                <Text style={styles.modalSubmitText}>
-                                    {submittingComment ? 'Enviando...' : 'Enviar'}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </View>
-            </Modal>
-            
+                onClose={() => setShowAddCommentModal(false)}
+                onSubmit={handleSubmitComment}
+                newComment={newComment}
+                setNewComment={setNewComment}
+                newRating={newRating}
+                setNewRating={setNewRating}
+                submittingComment={submittingComment}
+            />
             {/* Modal de Alertas */}
             <AlertModal
                 alertState={alertState}

@@ -1,9 +1,11 @@
 import { Stack } from "expo-router";
 // import AuthGuard from "../components/AuthGuard"; // Comentado temporalmente
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export default function RootLayout() {
   return (
-    // <AuthGuard> // Comentado temporalmente
+    <ErrorBoundary>
+      {/* <AuthGuard> // Comentado temporalmente */}
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
@@ -20,6 +22,7 @@ export default function RootLayout() {
         <Stack.Screen name="buscarReceta" />
         <Stack.Screen name="recipeDetail" />
       </Stack>
-    // </AuthGuard> // Comentado temporalmente
+      {/* </AuthGuard> // Comentado temporalmente */}
+    </ErrorBoundary>
   );
 }
