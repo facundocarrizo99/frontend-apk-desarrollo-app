@@ -92,70 +92,40 @@ export default function BuscarRecetasScreen() {
         try {
             let results: Recipe[] = [];
 
-            // Si hay texto de búsqueda, primero obtener todas las recetas y filtrar
-            if (searchText.trim()) {
-                const allRecipesResponse = await RecipesService.getApprovedRecipes();
-                if (allRecipesResponse.success && allRecipesResponse.recipes) {
-                    results = RecipesService.searchRecipes(allRecipesResponse.recipes, searchText);
-                }
+            // Obtener todas las recetas aprobadas primero
+            const allRecipesResponse = await RecipesService.getApprovedRecipes();
+            if (allRecipesResponse.success && allRecipesResponse.recipes) {
+                results = allRecipesResponse.recipes.filter(r => r.aprobado === true);
             }
 
-            // Aplicar filtros de ingredientes
+            // Si hay texto de búsqueda, filtrar por texto
+            if (searchText.trim()) {
+                results = RecipesService.searchRecipes(results, searchText);
+            }
+
+            // Aplicar filtros de ingredientes a incluir
             if (filters.includeIngredients.length > 0) {
                 for (const ingredient of filters.includeIngredients) {
-                    const response = await RecipesService.filterByIngredient(ingredient);
-                    if (response.success && response.recipes) {
-                        if (results.length === 0) {
-                            results = response.recipes;
-                        } else {
-                            // Intersección: mantener solo recetas que aparecen en ambos
-                            results = results.filter(recipe => 
-                                response.recipes!.some(r => r._id === recipe._id)
-                            );
-                        }
-                    }
+                    results = results.filter(recipe =>
+                        recipe.ingredientes?.some(ing => ing.ingrediente?.toLowerCase() === ingredient.toLowerCase())
+                    );
                 }
             }
 
-            // Aplicar filtros de exclusión de ingredientes
+            // Aplicar filtros de ingredientes a excluir (arreglado)
             if (filters.excludeIngredients.length > 0) {
                 for (const ingredient of filters.excludeIngredients) {
-                    const response = await RecipesService.filterByNotIngredient(ingredient);
-                    if (response.success && response.recipes) {
-                        if (results.length === 0) {
-                            results = response.recipes;
-                        } else {
-                            // Intersección: mantener solo recetas que aparecen en ambos
-                            results = results.filter(recipe => 
-                                response.recipes!.some(r => r._id === recipe._id)
-                            );
-                        }
-                    }
+                    results = results.filter(recipe =>
+                        !recipe.ingredientes?.some(ing => ing.ingrediente?.toLowerCase() === ingredient.toLowerCase())
+                    );
                 }
             }
 
             // Aplicar filtros de tags
             if (filters.tags.length > 0) {
-                const response = await RecipesService.filterByTags(filters.tags);
-                if (response.success && response.recipes) {
-                    if (results.length === 0) {
-                        results = response.recipes;
-                    } else {
-                        // Intersección: mantener solo recetas que aparecen en ambos
-                        results = results.filter(recipe => 
-                            response.recipes!.some(r => r._id === recipe._id)
-                        );
-                    }
-                }
-            }
-
-            // Si no hay filtros específicos pero hay texto, obtener todas las recetas
-            if (filters.includeIngredients.length === 0 && filters.excludeIngredients.length === 0 && 
-                filters.tags.length === 0 && searchText.trim() && results.length === 0) {
-                const allRecipesResponse = await RecipesService.getApprovedRecipes();
-                if (allRecipesResponse.success && allRecipesResponse.recipes) {
-                    results = RecipesService.searchRecipes(allRecipesResponse.recipes, searchText);
-                }
+                results = results.filter(recipe =>
+                    filters.tags.every(tag => (recipe.tags ?? []).includes(tag))
+                );
             }
 
             setSearchResults(results);
