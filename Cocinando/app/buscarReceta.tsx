@@ -42,6 +42,8 @@ export default function BuscarRecetasScreen() {
     const [searchResults, setSearchResults] = useState<Recipe[]>([]);
     const [loading, setLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
+    // Estado para ordenamiento
+    const [sortOption, setSortOption] = useState<'name' | 'date'>('name');
 
     // Estados para filtros
     const [filters, setFilters] = useState<SearchFilters>({
@@ -92,70 +94,40 @@ export default function BuscarRecetasScreen() {
         try {
             let results: Recipe[] = [];
 
-            // Si hay texto de búsqueda, primero obtener todas las recetas y filtrar
-            if (searchText.trim()) {
-                const allRecipesResponse = await RecipesService.getApprovedRecipes();
-                if (allRecipesResponse.success && allRecipesResponse.recipes) {
-                    results = RecipesService.searchRecipes(allRecipesResponse.recipes, searchText);
-                }
+            // Obtener todas las recetas aprobadas primero
+            const allRecipesResponse = await RecipesService.getApprovedRecipes();
+            if (allRecipesResponse.success && allRecipesResponse.recipes) {
+                results = allRecipesResponse.recipes.filter(r => r.aprobado === true);
             }
 
-            // Aplicar filtros de ingredientes
+            // Si hay texto de búsqueda, filtrar por texto
+            if (searchText.trim()) {
+                results = RecipesService.searchRecipes(results, searchText);
+            }
+
+            // Aplicar filtros de ingredientes a incluir
             if (filters.includeIngredients.length > 0) {
                 for (const ingredient of filters.includeIngredients) {
-                    const response = await RecipesService.filterByIngredient(ingredient);
-                    if (response.success && response.recipes) {
-                        if (results.length === 0) {
-                            results = response.recipes;
-                        } else {
-                            // Intersección: mantener solo recetas que aparecen en ambos
-                            results = results.filter(recipe => 
-                                response.recipes!.some(r => r._id === recipe._id)
-                            );
-                        }
-                    }
+                    results = results.filter(recipe =>
+                        recipe.ingredientes?.some(ing => ing.ingrediente?.toLowerCase() === ingredient.toLowerCase())
+                    );
                 }
             }
 
-            // Aplicar filtros de exclusión de ingredientes
+            // Aplicar filtros de ingredientes a excluir (arreglado)
             if (filters.excludeIngredients.length > 0) {
                 for (const ingredient of filters.excludeIngredients) {
-                    const response = await RecipesService.filterByNotIngredient(ingredient);
-                    if (response.success && response.recipes) {
-                        if (results.length === 0) {
-                            results = response.recipes;
-                        } else {
-                            // Intersección: mantener solo recetas que aparecen en ambos
-                            results = results.filter(recipe => 
-                                response.recipes!.some(r => r._id === recipe._id)
-                            );
-                        }
-                    }
+                    results = results.filter(recipe =>
+                        !recipe.ingredientes?.some(ing => ing.ingrediente?.toLowerCase() === ingredient.toLowerCase())
+                    );
                 }
             }
 
             // Aplicar filtros de tags
             if (filters.tags.length > 0) {
-                const response = await RecipesService.filterByTags(filters.tags);
-                if (response.success && response.recipes) {
-                    if (results.length === 0) {
-                        results = response.recipes;
-                    } else {
-                        // Intersección: mantener solo recetas que aparecen en ambos
-                        results = results.filter(recipe => 
-                            response.recipes!.some(r => r._id === recipe._id)
-                        );
-                    }
-                }
-            }
-
-            // Si no hay filtros específicos pero hay texto, obtener todas las recetas
-            if (filters.includeIngredients.length === 0 && filters.excludeIngredients.length === 0 && 
-                filters.tags.length === 0 && searchText.trim() && results.length === 0) {
-                const allRecipesResponse = await RecipesService.getApprovedRecipes();
-                if (allRecipesResponse.success && allRecipesResponse.recipes) {
-                    results = RecipesService.searchRecipes(allRecipesResponse.recipes, searchText);
-                }
+                results = results.filter(recipe =>
+                    filters.tags.every(tag => (recipe.tags ?? []).includes(tag))
+                );
             }
 
             setSearchResults(results);
@@ -263,6 +235,17 @@ export default function BuscarRecetasScreen() {
         return filters.includeIngredients.length + filters.excludeIngredients.length + filters.tags.length;
     };
 
+    // Ordenar resultados antes de renderizar
+    const getSortedResults = () => {
+        const resultsCopy = [...searchResults];
+        if (sortOption === 'name') {
+            resultsCopy.sort((a, b) => (a.titulo || '').localeCompare(b.titulo || ''));
+        } else if (sortOption === 'date') {
+            resultsCopy.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+        }
+        return resultsCopy;
+    };
+
     return (
         <View style={styles.container}>
             <Header />
@@ -362,13 +345,29 @@ export default function BuscarRecetasScreen() {
                 {/* Resultados */}
                 {hasSearched && (
                     <View style={styles.resultsContainer}>
+                        {/* Selector de ordenamiento */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 10 }}>
+                            <Text style={{ fontWeight: '600', color: '#4C5F00' }}>Ordenar por:</Text>
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortOption === 'name' && styles.sortButtonActive]}
+                                onPress={() => setSortOption('name')}
+                            >
+                                <Text style={[styles.sortButtonText, sortOption === 'name' && styles.sortButtonTextActive]}>Nombre</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.sortButton, sortOption === 'date' && styles.sortButtonActive]}
+                                onPress={() => setSortOption('date')}
+                            >
+                                <Text style={[styles.sortButtonText, sortOption === 'date' && styles.sortButtonTextActive]}>Fecha</Text>
+                            </TouchableOpacity>
+                        </View>
                         <Text style={styles.resultsTitle}>
                             {loading ? 'Buscando...' : `${searchResults.length} resultado${searchResults.length !== 1 ? 's' : ''} encontrado${searchResults.length !== 1 ? 's' : ''}`}
                         </Text>
 
-                        {searchResults.length > 0 ? (
+                        {getSortedResults().length > 0 ? (
                             <View style={styles.recipesContainer}>
-                                {searchResults.map((recipe) => (
+                                {getSortedResults().map((recipe) => (
                                     <TouchableOpacity 
                                         key={recipe._id} 
                                         style={styles.recipeCard}
@@ -1050,5 +1049,22 @@ const styles = StyleSheet.create({
     suggestionText: {
         fontSize: 14,
         color: '#333',
+    },
+    sortButton: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+        backgroundColor: '#E8F5E8',
+    },
+    sortButtonActive: {
+        backgroundColor: '#4C5F00',
+    },
+    sortButtonText: {
+        color: '#4C5F00',
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    sortButtonTextActive: {
+        color: '#fff',
     },
 }); 

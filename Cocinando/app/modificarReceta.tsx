@@ -11,6 +11,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { AlertModal } from '../components/AlertModal';
 import BottomTabBar from '../components/BottomTabBar';
 import Header from '../components/Header';
@@ -18,6 +20,7 @@ import { CreateRecipeRequest, Ingredient } from '../types/Recipie';
 import { RecipesService } from '../utils/recipesService';
 import { useAlert } from '../utils/useAlert';
 import { useAuthGuard } from '../utils/useAuthGuard';
+import { useNetworkInfo } from '../utils/useNetworkInfo';
 
 const UNIDADES_MEDIDA = [
     'g', 'kg', 'ml', 'l', 'cdta', 'cda', 'taza', 'unidad', 'pizca'
@@ -42,6 +45,7 @@ const DIFICULTADES = [
 export default function ModificarRecetaScreen() {
     useAuthGuard();
     const params = useLocalSearchParams();
+    const { isConnected, isMetered } = useNetworkInfo();
     // Parse recipe from params (like recipeDetail)
     const id = params.id as string;
     const initialTitulo = params.titulo as string || '';
@@ -88,6 +92,48 @@ export default function ModificarRecetaScreen() {
     
     // Hook para alertas
     const { alertState, showError, showSuccess, hideAlert, handleConfirm, handleCancel } = useAlert();
+
+    // Sincronizar actualizaciones locales cuando la conexión es libre
+    React.useEffect(() => {
+        if (isConnected && !isMetered) {
+            syncLocalRecipeUpdates();
+        }
+    }, [isConnected, isMetered]);
+
+    // Guardar actualización localmente
+    const saveRecipeUpdateLocally = async (id: string, recipeData: CreateRecipeRequest) => {
+        try {
+            const stored = await AsyncStorage.getItem('pendingRecipeUpdates');
+            const pending = stored ? JSON.parse(stored) : [];
+            pending.push({ id, recipeData });
+            await AsyncStorage.setItem('pendingRecipeUpdates', JSON.stringify(pending));
+        } catch (e) {
+            showError('No se pudo guardar la actualización localmente');
+        }
+    };
+
+    // Sincronizar actualizaciones locales
+    const syncLocalRecipeUpdates = async () => {
+        try {
+            const stored = await AsyncStorage.getItem('pendingRecipeUpdates');
+            const pending: { id: string, recipeData: CreateRecipeRequest }[] = stored ? JSON.parse(stored) : [];
+            if (pending.length === 0) return;
+            let allUploaded = true;
+            for (const update of pending) {
+                const response = await RecipesService.updateRecipe(update.id, update.recipeData);
+                if (!response.success) {
+                    allUploaded = false;
+                    break;
+                }
+            }
+            if (allUploaded) {
+                await AsyncStorage.removeItem('pendingRecipeUpdates');
+                showSuccess('Actualizaciones pendientes sincronizadas exitosamente');
+            }
+        } catch (e) {
+            // No mostrar error, se reintentará luego
+        }
+    };
 
     // Funciones para tags
     const toggleTag = (tag: string) => {
@@ -224,16 +270,23 @@ export default function ModificarRecetaScreen() {
                 imagen: imagen.trim() || undefined,
             };
 
-            // You may need to implement updateRecipe in RecipesService
-            const response = await RecipesService.updateRecipe(id, recipeData);
-
-            if (response.success) {
+            if (!isConnected || isMetered) {
+                await saveRecipeUpdateLocally(id, recipeData);
                 showSuccess(
-                    'Tu receta ha sido actualizada correctamente.',
+                    'Estás sin conexión o en una red medida. Los cambios se guardaron localmente y se enviarán cuando tengas una conexión libre.',
                     () => router.push('/homeScreen')
                 );
             } else {
-                showError(response.error || 'Error al actualizar la receta');
+                const response = await RecipesService.updateRecipe(id, recipeData);
+
+                if (response.success) {
+                    showSuccess(
+                        'Tu receta ha sido actualizada correctamente.',
+                        () => router.push('/homeScreen')
+                    );
+                } else {
+                    showError(response.error || 'Error al actualizar la receta');
+                }
             }
         } catch (error) {
             showError('Error de conexión');
